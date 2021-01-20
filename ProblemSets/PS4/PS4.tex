@@ -58,13 +58,13 @@
 \usepackage{breakurl}    % Allows urls to wrap, including hyperref
 
 \pagestyle{head}
-\firstpageheader{\textbf{\class\ - \term}}{\textbf{\examnum}}{\textbf{Due: Feb. 11\\ beginning of class}}
-\runningheader{\textbf{\class\ - \term}}{\textbf{\examnum}}{\textbf{Due: Feb. 11\\ beginning of class}}
+\firstpageheader{\textbf{\class\ - \term}}{\textbf{\examnum}}{\textbf{Due: Feb. 23\\ beginning of class}}
+\runningheader{\textbf{\class\ - \term}}{\textbf{\examnum}}{\textbf{Due: Feb. 23\\ beginning of class}}
 \runningheadrule
 
 \newcommand{\class}{Econ 5253}
-\newcommand{\term}{Spring 2020}
-\newcommand{\examdate}{Due: February 11, 2020}
+\newcommand{\term}{Spring 2021}
+\newcommand{\examdate}{Due: February 23, 2021}
 % \newcommand{\timelimit}{30 Minutes}
 
 \noprintanswers                         % Uncomment for no solutions version
@@ -75,7 +75,7 @@
 \begin{document}
 This problem set will provide an opportunity for you to continue practicing with the command line and executing batch jobs on the OSCER cluster. You will also get practice importing data and working in Spark. 
 
-As with the previous problem sets, you will submit this problem set by pushing the document to \emph{your} (private) fork of the class repository. You will put this and all other problem sets in the path \texttt{/DScourseS20/ProblemSets/PS4/} and name the file \texttt{PS4\_LastName.*}. Your OSCER home directory and GitHub repository should be perfectly in sync, such that I should be able to find these materials by looking in either place. Your directory should contain four files:
+As with the previous problem sets, you will submit this problem set by pushing the document to \emph{your} (private) fork of the class repository. You will put this and all other problem sets in the path \texttt{/DScourseS21/ProblemSets/PS4/} and name the file \texttt{PS4\_LastName.*}. Your OSCER home directory and GitHub repository should be perfectly in sync, such that I should be able to find these materials by looking in either place. Your directory should contain four files:
 \begin{itemize}
     \item \texttt{PS4a\_LastName.R} (first R exercise; though you can also do this in Python or Julia if you prefer)
     \item \texttt{PS4b\_LastName.R} (\texttt{sparkR} exercise)
@@ -83,7 +83,7 @@ As with the previous problem sets, you will submit this problem set by pushing t
     \item \texttt{PS4\_LastName.pdf}
 \end{itemize}
 \begin{questions}
-\question Log in to OSCER, change to the directory where you cloned your forked GitHub repository (probably \texttt{\textasciitilde/DScourseS20}), and make sure the OSCER version of your repository is synchronized with what is listed on GitHub by issuing a pull. That is, type \texttt{git pull origin master} from your OSCER \texttt{DScourseS20} folder. 
+\question Log in to OSCER, change to the directory where you cloned your forked GitHub repository (probably \texttt{\textasciitilde/DScourseS21}), and make sure the OSCER version of your repository is synchronized with what is listed on GitHub by issuing a pull. That is, type \texttt{git pull origin master} from your OSCER \texttt{DScourseS21} folder. 
 
 \question Synchronize your fork with the class repository by doing a \texttt{git fetch upstream} and then merging the resulting branch. 
 \begin{itemize}
@@ -191,7 +191,7 @@ In another part of your .tex file, answer the questions raised in the various pa
 
 \question Compile your .tex file, download the PDF and .tex file, and transfer it to your cloned repository on OSCER using your SFTP client of choice (or via \texttt{scp} from your laptop terminal). You may also copy and paste your .tex file from your browser directly into your terminal via \texttt{nano} if you prefer, but you will need to use SFTP or \texttt{scp} to transer the PDF.\footnote{If you want to try out something new, you can compile your .tex file on OSCER by typing \texttt{pdflatex myfile.tex} at the command prompt of the appropriate directory. This will create the PDF directly on OSCER, removing the requirement to use SFTP or \texttt{scp} to move the file over.}
 
-\question You should turn in the following files: .tex, .pdf,  and two .R scripts.  Make sure that these files each have the correct naming convention (see top of this problem set for directions) and are located in the correct directory (i.e. \texttt{\textasciitilde/DScourseS20/ProblemSets/PS4}).
+\question You should turn in the following files: .tex, .pdf,  and two .R scripts.  Make sure that these files each have the correct naming convention (see top of this problem set for directions) and are located in the correct directory (i.e. \texttt{\textasciitilde/DScourseS21/ProblemSets/PS4}).
 
 \question Synchronize your local git repository (in your OSCER home directory) with your GitHub fork by using the commands in Problem Set 2 (i.e. \texttt{git add}, \texttt{git commit -m ''message''}, and \texttt{git push origin master}). Once you have done this, issue a \texttt{git pull} from the location of your other local git repository (e.g. on your personal computer). Verify that the PS4 files appear in the appropriate place in your other local repository.
 

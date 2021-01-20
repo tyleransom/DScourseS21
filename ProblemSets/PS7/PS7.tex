@@ -58,13 +58,13 @@
 \usepackage{breakurl}    % Allows urls to wrap, including hyperref
 
 \pagestyle{head}
-\firstpageheader{\textbf{\class\ - \term}}{\textbf{\examnum}}{\textbf{Due: Mar. 10\\ beginning of class}}
-\runningheader{\textbf{\class\ - \term}}{\textbf{\examnum}}{\textbf{Due: Mar. 10\\ beginning of class}}
+\firstpageheader{\textbf{\class\ - \term}}{\textbf{\examnum}}{\textbf{Due: Mar. 25\\ beginning of class}}
+\runningheader{\textbf{\class\ - \term}}{\textbf{\examnum}}{\textbf{Due: Mar. 25\\ beginning of class}}
 \runningheadrule
 
 \newcommand{\class}{Econ 5253}
-\newcommand{\term}{Spring 2020}
-\newcommand{\examdate}{Due: March 10, 2020}
+\newcommand{\term}{Spring 2021}
+\newcommand{\examdate}{Due: March 25, 2021}
 % \newcommand{\timelimit}{30 Minutes}
 
 \noprintanswers                         % Uncomment for no solutions version
@@ -75,14 +75,14 @@
 \begin{document}
 This problem set will give you practice with imputing missing data and automating the process of creating reports of summary tables and model estimates.
 
-As with the previous problem sets, you will submit this problem set by pushing the document to \emph{your} (private) fork of the class repository. You will put this and all other problem sets in the path \texttt{/DScourseS20/ProblemSets/PS7/} and name the file \texttt{PS7\_LastName.*}. Your OSCER home directory and GitHub repository should be perfectly in sync, such that I should be able to find these materials by looking in either place. Your directory should contain at least three files:
+As with the previous problem sets, you will submit this problem set by pushing the document to \emph{your} (private) fork of the class repository. You will put this and all other problem sets in the path \texttt{/DScourseS21/ProblemSets/PS7/} and name the file \texttt{PS7\_LastName.*}. Your OSCER home directory and GitHub repository should be perfectly in sync, such that I should be able to find these materials by looking in either place. Your directory should contain at least three files:
 \begin{itemize}
     \item \texttt{PS7\_LastName.R} (you can also do this in Python or Julia if you prefer)
     \item \texttt{PS7\_LastName.tex}
     \item \texttt{PS7\_LastName.pdf}
 \end{itemize}
 \begin{questions}
-\question Type \texttt{git pull origin master} from your OSCER \texttt{DScourseS20} folder to make sure your OSCER folder is synchronized with your GitHub repository. 
+\question Type \texttt{git pull origin master} from your OSCER \texttt{DScourseS21} folder to make sure your OSCER folder is synchronized with your GitHub repository. 
 
 \question Synchronize your fork with the class repository by doing a \texttt{git fetch upstream} and then merging the resulting branch. 
 
@@ -90,19 +90,19 @@ As with the previous problem sets, you will submit this problem set by pushing t
 \begin{itemize}
     %\item \texttt{MixedDataImpute}
     \item \texttt{mice}
-    \item \texttt{stargazer}
+    \item \texttt{modelsummary}
 \end{itemize}
 
 The first two packages are useful for imputing missing data.
-\href{https://cran.r-project.org/web/packages/stargazer/vignettes/stargazer.pdf}{stargazer} is useful to researchers by taking summary statistics tables or output from statistical models and converting them to \LaTeX tables automatically. (If you'd like to use Python for this assignment, the Python version of \texttt{stargazer} is the \texttt{summary\_col} function of the library \texttt{statsmodels.api}. I don't know of a package like this that exists in Julia.)
+\href{https://vincentarelbundock.github.io/modelsummary/}{modelsummary} is useful to researchers by taking summary statistics tables or output from statistical models and converting them to \LaTeX tables automatically. (If you'd like to use Python for this assignment, the Python version of \texttt{modelsummary} is the \texttt{summary\_col} function of the library \texttt{statsmodels.api}. I don't know of a package like this that exists in Julia.)
 
-\question Using R or Python, load the file \texttt{wages.csv} (located on our GitHub course page, in the ``Modeling'' folder) in as a data frame. This data set contains information on $\approx 2,250$ women who were working in the US in 1988. The variables should be self-explanatory, except for \texttt{tenure}, which refers to how long (in years) each woman has been at her current employer, and \texttt{hgc}, which refers to how many years of schooling each woman has completed.
+\question Using R or Python, load the file \texttt{wages.csv} (located in the current folder) in as a data frame. This data set contains information on $\approx 2,250$ women who were working in the US in 1988. The variables should be self-explanatory, except for \texttt{tenure}, which refers to how long (in years) each woman has been at her current employer, and \texttt{hgc}, which refers to how many years of schooling each woman has completed.
 
 \question Drop observations where either \texttt{hgc} or \texttt{tenure} are missing.
 
-\question Use \texttt{stargazer} to produce a summary table of this data frame.
+\question Use \texttt{modelsummary} to produce a summary table of this data frame.
 
-If you have never used this package before, consult the online documentation available \href{https://cran.r-project.org/web/packages/stargazer/vignettes/stargazer.pdf}{here}. The package will output \LaTeX code in the R console which you can copy and paste into your writeup for this homework. 
+If you have never used this package before, consult the online documentation available \href{https://vincentarelbundock.github.io/modelsummary/}{here}. The package will output \LaTeX code in the R console which you can copy and paste into your writeup for this homework. You can also have it write directly to a separate file and then include that in your document.
 
 At what rate are log wages missing? Do you think the \texttt{logwage} variable is most likely to be MCAR, MAR, or MNAR?
 
@@ -122,7 +122,7 @@ Our coefficient of interest is $\beta_{1}$ which can be interpreted as the retur
     %\item use the \texttt{MixedDataImpute} package to impute missing log wages
 \end{itemize}
 
-Once you have finished all of this, use \texttt{stargazer} to create one regression table which has the estimates of the first three regression models. (\texttt{mice} does not produce output that is compatible with \texttt{stargazer}.) Include this table in your .tex writeup. 
+Once you have finished all of this, use \texttt{modelsummary} to create one regression table which has the estimates of the first three regression models. (\texttt{mice} may not produce output that is compatible with \texttt{modelsummary}.) Include this table in your .tex writeup. 
 
 The true value of $\hat{\beta}_{1}=0.093$. Comment on the differences of $\hat{\beta}_{1}$ across the models. What patterns do you see? What can you conclude about the veracity of the various imputation methods? Also discuss what the estimates of $\hat{\beta}_{1}$ are for the last two methods.
 
@@ -130,7 +130,7 @@ The true value of $\hat{\beta}_{1}=0.093$. Comment on the differences of $\hat{\
 
 \question Compile your .tex file, download the PDF and .tex file, and transfer it to your cloned repository on OSCER using your SFTP client of choice (or via \texttt{scp} from your laptop terminal). You may also copy and paste your .tex file from your browser directly into your terminal via \texttt{nano} if you prefer, but you will need to use SFTP or \texttt{scp} to transer the PDF.\footnote{If you want to try out something different, you can compile your .tex file on OSCER by typing \texttt{pdflatex myfile.tex} at the command prompt of the appropriate directory. This will create the PDF directly on OSCER, removing the requirement to use SFTP or \texttt{scp} to move the file over.}
 
-\question You should turn in the following files: .tex, .pdf, and any additional scripts (e.g. .R, .py, or .jl) required to reproduce your work.  Make sure that these files each have the correct naming convention (see top of this problem set for directions) and are located in the correct directory (i.e. \texttt{\textasciitilde/DScourseS20/ProblemSets/PS7}).
+\question You should turn in the following files: .tex, .pdf, and any additional scripts (e.g. .R, .py, or .jl) required to reproduce your work.  Make sure that these files each have the correct naming convention (see top of this problem set for directions) and are located in the correct directory (i.e. \texttt{\textasciitilde/DScourseS21/ProblemSets/PS7}).
 
 \question Synchronize your local git repository (in your OSCER home directory) with your GitHub fork by using the commands in Problem Set 2 (i.e. \texttt{git add}, \texttt{git commit -m ''message''}, and \texttt{git push origin master}). Once you have done this, issue a \texttt{git pull} from the location of your other local git repository (e.g. on your personal computer). Verify that the PS7 files appear in the appropriate place in your other local repository.
 
