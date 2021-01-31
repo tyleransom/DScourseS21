@@ -1,0 +1,28 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+
+\title{Data Science Problem Set 1}
+\author{Misael Serna }
+\date{January 2021}
+
+\usepackage{natbib}
+\usepackage{graphicx}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+My interest in economics is derived by my life experiences. I have a large interest in the economic development of certain Latin American and Asian economies. More importantly in the reasons why certain economies develop faster than others, and why economies under similar circumstances sometimes take such divergent paths. This interest is derived from my own family history. Being the child of immigrants from Latin America. I have often considered the reasons why human migrations happen and what are the economic reasons that most impact these actions.
+
+Along with this, having had the opportunity to travel I wonder why certain countries have higher levels of economic development when similar conditions are present. Specifically, what are the biggest socioeconomic factors that lead to similarly positioned economies to grow at such different rates, and in some cases have drastic differences in measures of economic development.
+
+My personal interest in this course was piqued by a discussion with Dr.Ghosh. In speaking to him it was made apparent the utility of this class. Specially, in regards to developing my coding skills. I have experience in coding in more traditional webcoding languages. Specifically, Javascript, Java, CSS, HTML, and some SQL. Since I worked some years in a software development company. However, I have little practical knowledge in traditional data science languages such as R, Python, Stata, and the likes. This is something that worries me greatly as I know how important this knowledge is to an economist. Since this is my first year in the Phd program it seams like a great time to develop these skills. 
+
+I am still not sure exactly what I would like to focus on for my class project. I have to do a deeper dive into the available information, and what would interest me the most. As I mentioned above, my hopes in this class is to greatly improve my ability to use traditional data science techniques and software. This in order to improve my ability to manipulate and interpret economic data. After graduating I would love to be able to work in academia, and work on research that could help underdeveloped countries improve their economic situations. 
+
+
+
+\section{Equation}
+\[ a^2 + b^2 =c^2 \]
+\end{document}
