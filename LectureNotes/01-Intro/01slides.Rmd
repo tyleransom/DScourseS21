@@ -2,7 +2,7 @@
 title: "Lecture 1"
 subtitle: "What is Data Science?"
 author: Tyler Ransom
-date: ECON 6343, University of Oklahoma
+date: ECON 5253, University of Oklahoma
 output:
   xaringan::moon_reader:
     includes:
