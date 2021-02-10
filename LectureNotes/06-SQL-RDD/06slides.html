@@ -1,0 +1,5195 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Lecture 6</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Tyler Ransom" />
+    <link href="06slides_files/remark-css-0.0.1/default.css" rel="stylesheet" />
+    <link href="06slides_files/remark-css-0.0.1/metropolis.css" rel="stylesheet" />
+    <link href="06slides_files/remark-css-0.0.1/metropolis-fonts.css" rel="stylesheet" />
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+            TeX: { equationNumbers: { autoNumber: "AMS" } },
+        });
+    </script>
+        <style>
+        .mjx-mrow a {
+            color: black;
+            pointer-events: none;
+            cursor: default;
+        }
+    </style>
+    <link rel="stylesheet" href="byu-colors.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# Lecture 6
+## Intro to SQL
+### Tyler Ransom
+### ECON 5253, University of Oklahoma
+
+---
+
+
+
+
+# Plan for the day
+
+- Intro to SQL
+
+- Coding syntax for basic SQL operations
+
+---
+# SQL
+
+- Structured Query Language (SQL) is a commonly language for processing relational databases 
+
+- What is a relational database?
+
+    - A system of databases
+    
+    - Most research questions involve more than one single database
+    
+    - The "ecosystem" of databases constitutes *relational data*
+    
+    - Manage data with *joins* (or *merges*)
+
+- The next slides are a beginner's guide to using SQL (at the command line)
+
+---
+# Opening and Exiting out of SQL
+
+- One can open SQL from the command line by typing `sqlite3` at the prompt
+
+- SQL .hi[commands] are prepended with a `.` so to exit SQL, type `.quit`
+
+---
+# Executing a SQL script
+
+- Supposing one has a file called `test.sql`, one can execute it by typing `.read test.sql` at the prompt (inside SQL)
+
+---
+# Reading data into SQL
+
+To read data into SQL (e.g. from a CSV or tab-delimited raw file), there are actually two steps:
+
+1. Create a SQL table which will hold the data
+
+2. Read the raw data file into SQL's memory
+
+---
+# Reading in data: Step 1
+
+To do step 1, type the following:
+```sql
+CREATE TABLE datname(
+  "var1" CHAR,
+  "var2" INTEGER,
+  ...
+  "varN" REAL 
+);
+where `datname` is whatever you want to call your database in SQL.
+```
+
+---
+# Reading in data: Step 2
+To do step 2, type the following:
+```sql
+.mode csv
+.import /path/to/file.csv datname
+```
+
+It is also possible to accomplish this interactively in a GUI if you have, e.g. SQLite Studio or similar
+
+---
+# Printing N observations of your database
+
+To print N observations of your database, type
+```sql
+SELECT * FROM datname LIMIT N;
+```
+
+To print N observations of a subset of variables, type
+```sql
+SELECT var1, var2, ..., varK FROM datname LIMIT N;
+```
+
+---
+# Deleting observations (and subsetting statements)
+
+One can remove observations under certain conditions as follows:
+
+```sql
+DELETE FROM datname WHERE condition; 
+```
+note that `condition` is some conditional statement, like `var1='value1'` or `var1=10` or `var1&lt;=10`, etc.
+
+If you leave off the `WHERE condition` statement, you will delete *all* observations from the database
+
+---
+# Delete column from table
+
+- SQLite does not allow you to drop a column 
+
+- The workaround is to make a new table that contains only the columns you want to keep, then rename the new table to the original template's name
+
+```sql
+-- Create a table called 'datname_temp' with the columns we don't want to drop
+CREATE TABLE datname_temp(var1, var2, var5);
+
+-- Copy the data from the columns we want to keep to the new table
+INSERT INTO datname_temp SELECT var1, var2, var5 FROM criminals;
+
+-- Delete the original table
+DROP TABLE datname;
+
+-- Rename the new table to the original table's name
+ALTER TABLE datname_temp RENAME TO datname;
+```
+
+---
+# Add column to table
+
+Adding is easier than removing:
+
+```sql
+ALTER TABLE datname ADD COLUMN newvarname type DEFAULT value;
+```
+where `newvarname` is the new column name; `type` is the type of values that column will house (e.g. text, integers, real numbers, etc.), and `value` is the default value of that column (e.g. 'one' if the type is text, '1' if the type is integer, '3.14159' if the type is real, etc.).
+
+---
+# Create a one-way frequency table
+
+Create a one-way frequency table as follows:
+
+```sql
+SELECT var1, COUNT(*) FROM datname GROUP BY var1;
+```
+This will then list the unique categories and counts for each category
+
+---
+# Compute summary statistics
+
+```sql
+SELECT FUNCTION(var1) FROM datname;
+```
+where the following are functions:
+
+* `AVG`: average
+* `COUNT`: count
+* `SUM`: sum
+* `MIN`: minimum
+* `MAX`: maximum
+
+---
+# Summary statistics of functions of variables
+
+For example:
+
+```sql
+SELECT FUNCTION(var1 + var2) FROM datname;
+```
+would apply the `AVG` or `SUM` or `MIN` to the sum of `var1` and `var2`. More complex functions (like square root) are not supported in SQLite, so something like
+
+```sql
+SELECT AVG(SQRT(var1)) FROM datname;
+```
+
+will not work, but
+```sql
+SELECT (var1-var2) AS tempvarname FROM datname;
+```
+will. `AS` acts as an alias.
+
+---
+# Saving data while using SQL
+
+- If one wants to save a database in SQL, the file extension is `.sqlite3` (but in principle you can use whatever you want)
+
+- The way to save data is to issue the `.dump` command:
+
+```sql
+.output datname.sqlite3
+.dump
+```
+
+The result will be a text file with SQL code in it that will recreate the table you dumped
+
+---
+# Using SQL syntax in R
+
+- It is possible to manipulate dataframes in R with SQL synatx
+
+```r
+library(tidyverse)
+library(sqldf)
+
+df &lt;- iris %&gt;% as_tibble()
+sqldf('SELECT count(*) FROM df WHERE Species = "virginica"')
+
+# store the output:
+counted &lt;- sqldf('SELECT count(*) FROM df WHERE Species = "virginica"')
+
+# dplyr way:
+counted.dplyr &lt;- df %&gt;% filter(Species=="virginica") %&gt;% count
+```
+
+---
+# SQL Examples (from Chris Albon)
+
+Taken from [Chris Albon](https://github.com/chrisalbon)'s [archived GitHub repository](https://github.com/chrisalbon/mlai) on machine learning and artifical intelligence
+
+---
+# Create Data
+
+
+```sql
+-- Create a table of criminals
+CREATE TABLE criminals (pid, name, age, sex, city, minor);
+INSERT INTO criminals VALUES (412, 'James Smith', 15, 'M', 'Santa Rosa', 1);
+INSERT INTO criminals VALUES (234, 'Bill James', 22, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (632, 'Stacy Miller', 23, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (621, 'Betty Bob', NULL, 'F', 'Petaluma', 1);
+INSERT INTO criminals VALUES (162, 'Jaden Ado', 49, 'M', NULL, 0);
+INSERT INTO criminals VALUES (901, 'Gordon Ado', 32, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (512, 'Bill Byson', 21, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (411, 'Bob Iton', NULL, 'M', 'San Francisco', 0);
+```
+
+---
+# View Table
+
+
+```sql
+-- Select everything
+SELECT *
+
+-- From the table 'criminals'
+FROM criminals
+```
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;234&lt;/td&gt;
+        &lt;td&gt;Bill James&lt;/td&gt;
+        &lt;td&gt;22&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;Stacy Miller&lt;/td&gt;
+        &lt;td&gt;23&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;621&lt;/td&gt;
+        &lt;td&gt;Betty Bob&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;162&lt;/td&gt;
+        &lt;td&gt;Jaden Ado&lt;/td&gt;
+        &lt;td&gt;49&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;411&lt;/td&gt;
+        &lt;td&gt;Bob Iton&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+---
+# Delete Column
+
+```sql
+
+-- Edit the table
+ALTER TABLE criminals
+
+-- Add a column called 'state' that contains text with the default value being 'CA'
+ADD COLUMN state text DEFAULT 'CA'
+```
+
+
+
+
+
+
+
+
+---
+# View Table
+
+
+```sql
+-- Select everything
+SELECT *
+
+-- From the table 'criminals'
+FROM criminals
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+        &lt;th&gt;state&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+        &lt;td&gt;CA&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;234&lt;/td&gt;
+        &lt;td&gt;Bill James&lt;/td&gt;
+        &lt;td&gt;22&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+        &lt;td&gt;CA&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;Stacy Miller&lt;/td&gt;
+        &lt;td&gt;23&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+        &lt;td&gt;CA&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;621&lt;/td&gt;
+        &lt;td&gt;Betty Bob&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+        &lt;td&gt;CA&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;162&lt;/td&gt;
+        &lt;td&gt;Jaden Ado&lt;/td&gt;
+        &lt;td&gt;49&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+        &lt;td&gt;CA&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+        &lt;td&gt;CA&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+        &lt;td&gt;CA&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;411&lt;/td&gt;
+        &lt;td&gt;Bob Iton&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+        &lt;td&gt;CA&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+
+---
+# Create Data (again)
+
+```sql
+-- Drop previous table so we can create a new one with the same name
+DROP TABLE criminals;
+
+-- Create a table of criminals
+CREATE TABLE criminals (pid, name, age, sex, city, minor);
+INSERT INTO criminals VALUES (412, 'James Smith', 15, 'M', 'Santa Rosa', 1);
+INSERT INTO criminals VALUES (901, 'Gordon Ado', 32, 'F', 'San Francisco', 0);
+```
+
+---
+# View Table
+
+```sql
+SELECT * FROM criminals;
+```
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+---
+# Add New Row
+
+```sql
+-- Add into the table criminals
+INSERT INTO criminals 
+
+-- A new row with these values
+VALUES (512, 'Bill Byson', 21, 'M', 'Petaluma', 0);
+```
+
+---
+# View Table Again
+
+```sql
+--  Select all
+SELECT * FROM criminals;
+```
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+---
+# Create Data
+
+```sql
+-- Drop the previous table so we can create another one with the same name
+DROP TABLE criminals;
+
+-- Create a table of criminals
+CREATE TABLE criminals (pid, name, age, sex, city, minor);
+INSERT INTO criminals VALUES (412, 'James Smith', 15, 'M', 'Santa Rosa', 1);
+INSERT INTO criminals VALUES (234, 'Bill James', 22, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (632, 'Stacy Miller', 23, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (621, 'Betty Bob', NULL, 'F', 'Petaluma', 1);
+INSERT INTO criminals VALUES (162, 'Jaden Ado', 49, 'M', NULL, 0);
+INSERT INTO criminals VALUES (901, 'Gordon Ado', 32, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (512, 'Bill Byson', 21, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (411, 'Bob Iton', NULL, 'M', 'San Francisco', 0);
+```
+
+---
+# Alias Criminals Table As `C`, Select All Names From `C`
+
+
+```sql
+--  Select all rows of the "names" column from the table 'c'
+SELECT c.name
+
+-- From the criminals table, now called c
+FROM criminals AS c;
+```
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;name&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Bill James&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Stacy Miller&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Betty Bob&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Jaden Ado&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Bob Iton&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+---
+# Create Data With 'pid' As An Auto-Generated Primary Key
+
+```sql
+-- Drop the previous table so we can create another one with the same name
+DROP TABLE criminals;
+
+-- Create a table of criminals with pid being a primary key integer that is auto-incremented
+CREATE TABLE criminals (pid INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name, 
+                        age, 
+                        sex, 
+                        city, 
+                        minor);
+
+-- Add a single row with a null value for pid
+INSERT INTO criminals VALUES (NULL, 'James Smith', 15, 'M', 'Santa Rosa', 1);
+```
+
+---
+# View Table
+
+```sql
+SELECT * FROM criminals
+```
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;1&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+---
+# Added More Rows With NULL Values For pid
+
+```sql
+INSERT INTO criminals VALUES (NULL, 'Bill James', 22, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (NULL, 'Stacy Miller', 23, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (NULL, 'Betty Bob', NULL, 'F', 'Petaluma', 1);
+INSERT INTO criminals VALUES (NULL, 'Jaden Ado', 49, 'M', NULL, 0);
+INSERT INTO criminals VALUES (NULL, 'Gordon Ado', 32, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (NULL, 'Bill Byson', 21, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (NULL, 'Bob Iton', NULL, 'M', 'San Francisco', 0);
+```
+
+---
+# View Table
+
+```sql
+SELECT * FROM criminals
+```
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;1&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;2&lt;/td&gt;
+        &lt;td&gt;Bill James&lt;/td&gt;
+        &lt;td&gt;22&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;3&lt;/td&gt;
+        &lt;td&gt;Stacy Miller&lt;/td&gt;
+        &lt;td&gt;23&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;4&lt;/td&gt;
+        &lt;td&gt;Betty Bob&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;5&lt;/td&gt;
+        &lt;td&gt;Jaden Ado&lt;/td&gt;
+        &lt;td&gt;49&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;6&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;7&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;8&lt;/td&gt;
+        &lt;td&gt;Bob Iton&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+---
+# Write Some SQL Code With Single And Multiline Comments
+
+```sql
+--  This is a single line of commenting
+SELECT name, age
+
+FROM criminals -- It can also be placed at the end of the line
+
+/* This is multiple 
+lines of comments so we can include more
+details if we need to. */
+WHERE name IS NOT NULL
+```
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+---
+# Create Table
+
+```sql
+-- Create a table of criminals_1
+CREATE TABLE criminals_1 (pid, name, age, sex, city, minor);
+INSERT INTO criminals_1 VALUES (412, 'James Smith', 15, 'M', 'Santa Rosa', 1);
+INSERT INTO criminals_1 VALUES (234, 'Bill James', 22, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals_1 VALUES (632, 'Stacy Miller', 23, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals_1 VALUES (621, 'Betty Bob', NULL, 'F', 'Petaluma', 1);
+INSERT INTO criminals_1 VALUES (162, 'Jaden Ado', 49, 'M', NULL, 0);
+INSERT INTO criminals_1 VALUES (901, 'Gordon Ado', 32, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals_1 VALUES (512, 'Bill Byson', 21, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals_1 VALUES (411, 'Bob Iton', NULL, 'M', 'San Francisco', 0);
+```
+
+---
+# View Table
+
+```sql
+SELECT * FROM criminals_1;
+```
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;234&lt;/td&gt;
+        &lt;td&gt;Bill James&lt;/td&gt;
+        &lt;td&gt;22&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;Stacy Miller&lt;/td&gt;
+        &lt;td&gt;23&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;621&lt;/td&gt;
+        &lt;td&gt;Betty Bob&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;162&lt;/td&gt;
+        &lt;td&gt;Jaden Ado&lt;/td&gt;
+        &lt;td&gt;49&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;411&lt;/td&gt;
+        &lt;td&gt;Bob Iton&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+---
+# Create New Empty Table
+
+```sql
+-- Create a table called criminals_2
+CREATE TABLE criminals_2 (pid, name, age, sex, city, minor);
+```
+
+---
+# Copy Contents Of First Table Into Empty Table
+
+```sql
+-- Insert into the empty table
+INSERT INTO criminals_2
+
+-- Everything
+SELECT * 
+
+-- From the first table
+FROM criminals_1;
+```
+
+---
+# View Previously Empty Table
+
+```sql
+SELECT * FROM criminals_2;
+```
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;234&lt;/td&gt;
+        &lt;td&gt;Bill James&lt;/td&gt;
+        &lt;td&gt;22&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;Stacy Miller&lt;/td&gt;
+        &lt;td&gt;23&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;621&lt;/td&gt;
+        &lt;td&gt;Betty Bob&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;162&lt;/td&gt;
+        &lt;td&gt;Jaden Ado&lt;/td&gt;
+        &lt;td&gt;49&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;411&lt;/td&gt;
+        &lt;td&gt;Bob Iton&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+---
+# Create A Table
+
+```sql
+-- Create a table of criminals
+CREATE TABLE criminals (pid, name, age, sex, city, minor);
+INSERT INTO criminals VALUES (412, 'James Smith', 15, 'M', 'Santa Rosa', 1);
+INSERT INTO criminals VALUES (234, 'Bill James', 22, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (632, 'Stacy Miller', 23, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (621, 'Betty Bob', NULL, 'F', 'Petaluma', 1);
+INSERT INTO criminals VALUES (162, 'Jaden Ado', 49, 'M', NULL, 0);
+INSERT INTO criminals VALUES (901, 'Gordon Ado', 32, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (512, 'Bill Byson', 21, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (411, 'Bob Iton', NULL, 'M', 'San Francisco', 0);
+```
+
+---
+# Select Everything In That Table
+
+```sql
+-- Select everything
+SELECT *
+
+-- From the table 'criminals'
+FROM criminals
+```
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;234&lt;/td&gt;
+        &lt;td&gt;Bill James&lt;/td&gt;
+        &lt;td&gt;22&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;Stacy Miller&lt;/td&gt;
+        &lt;td&gt;23&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;621&lt;/td&gt;
+        &lt;td&gt;Betty Bob&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;162&lt;/td&gt;
+        &lt;td&gt;Jaden Ado&lt;/td&gt;
+        &lt;td&gt;49&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;411&lt;/td&gt;
+        &lt;td&gt;Bob Iton&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+---
+# Create Data
+
+```sql
+-- Create a table of criminals
+CREATE TABLE criminals (pid, name, age, sex, city, minor);
+INSERT INTO criminals VALUES (412, 'James Smith', 15, 'M', 'Santa Rosa', 1);
+INSERT INTO criminals VALUES (234, 'Bill James', 22, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (632, 'Stacy Miller', 23, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (621, 'Betty Bob', NULL, 'F', 'Petaluma', 1);
+INSERT INTO criminals VALUES (162, 'Jaden Ado', 49, 'M', NULL, 0);
+INSERT INTO criminals VALUES (901, 'Gordon Ado', 32, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (512, 'Bill Byson', 21, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (411, 'Bob Iton', NULL, 'M', 'San Francisco', 0);
+```
+
+---
+# Create An Index Using The Column 'pid' As The Unique ID
+
+```sql
+-- Create a index called uid
+CREATE INDEX uid
+
+-- For the table 'criminals' and the column 'pid'
+ON criminals (pid)
+```
+
+_Note: Use 'CREATE UNIQUE INDEX' if you want the index to not contain any duplicates_
+
+
+---
+# Create New Table With Constraints On What Data Can Be Inserted
+
+```sql
+-- Create a table of criminals
+CREATE TABLE criminals 
+
+(
+
+-- With a prisoner ID (pid) that is a primary key and cannot be null
+ pid    INT PRIMARY KEY     NOT NULL, 
+ 
+-- With a name variable whose default value is John Doe
+ name   TEXT                DEFAULT 'John Doe',
+ 
+-- With an age variable that is an integer and has to be between 0 and 100
+ age    INT                 CHECK(0 &lt; age &lt; 100)
+
+);
+
+```
+
+---
+# Add Data To Table
+
+```sql
+INSERT INTO criminals VALUES (412, 'James Smith', 15);
+INSERT INTO criminals VALUES (234, 'Bill James', 22);
+INSERT INTO criminals VALUES (632, 'Bill Steve', 23);
+INSERT INTO criminals VALUES (621, 'Betty Bob', NULL);
+INSERT INTO criminals VALUES (162, 'Jaden Ado', 49);
+INSERT INTO criminals VALUES (901, 'Gordon Ado', 32);
+INSERT INTO criminals VALUES (512, 'Bill Byson', 21);
+INSERT INTO criminals VALUES (411, 'Bob Iton', NULL);
+```
+
+---
+# View Table
+
+```sql
+SELECT *
+
+FROM criminals
+```
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;234&lt;/td&gt;
+        &lt;td&gt;Bill James&lt;/td&gt;
+        &lt;td&gt;22&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;Bill Steve&lt;/td&gt;
+        &lt;td&gt;23&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;621&lt;/td&gt;
+        &lt;td&gt;Betty Bob&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;162&lt;/td&gt;
+        &lt;td&gt;Jaden Ado&lt;/td&gt;
+        &lt;td&gt;49&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;411&lt;/td&gt;
+        &lt;td&gt;Bob Iton&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+---
+# Get Current Date
+
+```sql
+-- Select the current date
+SELECT date('now');
+```
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;date(&amp;#x27;now&amp;#x27;)&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;2017-01-19&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+---
+# Get Current Date And Time
+
+```sql
+-- Select the unix time code '1200762133'
+SELECT datetime('now', 'unixepoch');
+```
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;datetime(&amp;#x27;now&amp;#x27;, &amp;#x27;unixepoch&amp;#x27;)&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;1970-01-29 10:42:53&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+---
+# Compute A UNIX timestamp into a date and time
+
+```sql
+-- Select the unix time code '1169229733'
+SELECT datetime(1169229733, 'unixepoch');
+```
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;datetime(1169229733, &amp;#x27;unixepoch&amp;#x27;)&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;2007-01-19 18:02:13&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+---
+# Compute A UNIX timestamp into a date and time and convert to the local timezone.
+
+```sql
+-- Select the unix time code '1171904533' and convert to the machine's local timezone
+SELECT datetime(1171904533, 'unixepoch', 'localtime');
+```
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;datetime(1171904533, &amp;#x27;unixepoch&amp;#x27;, &amp;#x27;localtime&amp;#x27;)&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;2007-02-19 10:02:13&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+---
+# Compute The Day Of The Week
+
+
+```sql
+-- Select the the day of this week (0 = Sunday, 4 = Thursday)
+SELECT strftime('%w','now');
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;strftime(&amp;#x27;%w&amp;#x27;,&amp;#x27;now&amp;#x27;)&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;4&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+
+---
+# Create Data
+
+```sql
+-- Create a table of criminals
+CREATE TABLE criminals (pid, name, age, sex, city, minor);
+INSERT INTO criminals VALUES (412, 'James Smith', 15, 'M', 'Santa Rosa', 1);
+INSERT INTO criminals VALUES (234, 'Bill James', 22, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (632, 'Stacy Miller', 23, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (621, 'Betty Bob', NULL, 'F', 'Petaluma', 1);
+INSERT INTO criminals VALUES (162, 'Jaden Ado', 49, 'M', NULL, 0);
+INSERT INTO criminals VALUES (901, 'Gordon Ado', 32, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (512, 'Bill Byson', 21, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (411, 'Bob Iton', NULL, 'M', 'San Francisco', 0);
+```
+
+---
+# Delete A Table
+
+```sql
+-- Delete the table called 'criminals'
+DROP TABLE criminals
+```
+
+
+
+
+
+
+
+
+---
+# View Table
+
+
+```sql
+-- Select everything
+SELECT *
+
+-- From the table 'criminals'
+FROM criminals
+```
+
+    (sqlite3.OperationalError) no such table: criminals [SQL: "-- Select everything\nSELECT *\n\n-- From the table 'criminals'\nFROM criminals"]
+
+
+_Note: We get an error because the table doesn't exist anymore._
+
+
+---
+# Create Data
+
+
+```sql
+-- Create a table of criminals
+CREATE TABLE criminals (pid, name, age, sex, city, minor);
+INSERT INTO criminals VALUES (412, 'James Smith', 15, 'M', 'Santa Rosa', 1);
+INSERT INTO criminals VALUES (234, 'Bill James', 22, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (632, 'Stacy Miller', 23, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (621, 'Betty Bob', NULL, 'F', 'Petaluma', 1);
+INSERT INTO criminals VALUES (162, 'Jaden Ado', 49, 'M', NULL, 0);
+INSERT INTO criminals VALUES (901, 'Gordon Ado', 32, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (512, 'Bill Byson', 21, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (411, 'Bob Iton', NULL, 'M', 'San Francisco', 0);
+```
+
+
+
+
+
+
+
+
+---
+# View The Table
+
+
+```sql
+-- Select everything
+SELECT *
+
+-- From the table 'criminals'
+FROM criminals
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;234&lt;/td&gt;
+        &lt;td&gt;Bill James&lt;/td&gt;
+        &lt;td&gt;22&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;Stacy Miller&lt;/td&gt;
+        &lt;td&gt;23&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;621&lt;/td&gt;
+        &lt;td&gt;Betty Bob&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;162&lt;/td&gt;
+        &lt;td&gt;Jaden Ado&lt;/td&gt;
+        &lt;td&gt;49&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;411&lt;/td&gt;
+        &lt;td&gt;Bob Iton&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+---
+# Delete A Table
+
+
+```sql
+-- Delete the contents of the table called 'criminals'
+DELETE FROM criminals
+```
+
+
+
+
+
+
+
+
+---
+# View The Table
+
+
+```sql
+-- Select everything
+SELECT *
+
+-- From the table 'criminals'
+FROM criminals
+```
+
+
+
+
+
+
+
+
+
+---
+# Create Data
+
+
+```sql
+-- Create a table of criminals
+CREATE TABLE criminals (pid, name, age, sex, city, minor);
+INSERT INTO criminals VALUES (412, 'James Smith', 15, 'M', 'Santa Rosa', 1);
+INSERT INTO criminals VALUES (234, 'Bill James', 22, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (632, 'Stacy Miller', 23, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (621, 'Betty Bob', NULL, 'F', 'Petaluma', 1);
+INSERT INTO criminals VALUES (162, 'Jaden Ado', 49, 'M', NULL, 0);
+INSERT INTO criminals VALUES (901, 'Gordon Ado', 32, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (512, 'Bill Byson', 21, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (411, 'Bob Iton', NULL, 'M', 'San Francisco', 0);
+```
+
+
+
+
+
+
+
+
+---
+# View Table
+
+
+```sql
+-- Select everything
+SELECT *
+
+-- From the table 'criminals'
+FROM criminals
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;234&lt;/td&gt;
+        &lt;td&gt;Bill James&lt;/td&gt;
+        &lt;td&gt;22&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;Stacy Miller&lt;/td&gt;
+        &lt;td&gt;23&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;621&lt;/td&gt;
+        &lt;td&gt;Betty Bob&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;162&lt;/td&gt;
+        &lt;td&gt;Jaden Ado&lt;/td&gt;
+        &lt;td&gt;49&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;411&lt;/td&gt;
+        &lt;td&gt;Bob Iton&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+---
+# Delete Column (Most Common)
+
+```sql
+-- Alter the table called 'criminals'
+ALTER TABLE criminals
+
+-- From the table 'criminals'
+DROP COLUMN age
+```
+
+---
+# Delete Column (SQLite)
+
+SQLite (the version of SQL used in this tutorial) does not allow you to drop a column. The workaround is to make a new table that contains only the columns you want to keep, then rename the new table to the original template's name.
+
+
+```sql
+-- Create a table called 'criminals_temp' with the columns we want to not drop
+CREATE TABLE criminals_temp(pid, name, sex);
+
+-- Copy the data from the columns we want to keep to the new table
+INSERT INTO criminals_temp SELECT pid, name, sex FROM criminals;
+
+-- Delete the original table
+DROP TABLE criminals;
+
+-- Rename the new table to the original table's name
+ALTER TABLE criminals_temp RENAME TO criminals;
+```
+
+
+
+
+
+
+
+
+---
+# View Table
+
+
+```sql
+-- Select everything
+SELECT *
+
+-- From the table 'criminals'
+FROM criminals
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;234&lt;/td&gt;
+        &lt;td&gt;Bill James&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;Stacy Miller&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;621&lt;/td&gt;
+        &lt;td&gt;Betty Bob&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;162&lt;/td&gt;
+        &lt;td&gt;Jaden Ado&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;411&lt;/td&gt;
+        &lt;td&gt;Bob Iton&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+
+---
+# Create Data
+
+
+```sql
+-- Create a table of criminals
+CREATE TABLE criminals (pid, name, age, sex, city, minor);
+INSERT INTO criminals VALUES (412, 'James Smith', 15, 'M', 'Santa Rosa', 1);
+INSERT INTO criminals VALUES (234, 'Bill James', 22, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (632, 'Stacy Miller', 23, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (621, 'Betty Bob', NULL, 'F', 'Petaluma', 1);
+INSERT INTO criminals VALUES (162, 'Jaden Ado', 49, 'M', NULL, 0);
+INSERT INTO criminals VALUES (901, 'Gordon Ado', 32, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (512, 'Bill Byson', 21, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (411, 'Bob Iton', NULL, 'M', 'San Francisco', 0);
+```
+
+
+
+
+
+
+
+
+---
+# View Table
+
+
+```sql
+--  Select all
+SELECT *
+
+-- From the criminals table
+FROM criminals
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;234&lt;/td&gt;
+        &lt;td&gt;Bill James&lt;/td&gt;
+        &lt;td&gt;22&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;Stacy Miller&lt;/td&gt;
+        &lt;td&gt;23&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;621&lt;/td&gt;
+        &lt;td&gt;Betty Bob&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;162&lt;/td&gt;
+        &lt;td&gt;Jaden Ado&lt;/td&gt;
+        &lt;td&gt;49&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;411&lt;/td&gt;
+        &lt;td&gt;Bob Iton&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+---
+# Drop Row Based On A Conditional
+
+
+```sql
+-- Delete all rows
+DELETE FROM criminals
+
+-- if the age is less than 18
+WHERE age &lt; 18
+```
+
+
+
+
+
+
+
+
+---
+# View Table Again
+
+
+```sql
+--  Select all
+SELECT *
+
+-- From the criminals table
+FROM criminals
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;234&lt;/td&gt;
+        &lt;td&gt;Bill James&lt;/td&gt;
+        &lt;td&gt;22&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;Stacy Miller&lt;/td&gt;
+        &lt;td&gt;23&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;621&lt;/td&gt;
+        &lt;td&gt;Betty Bob&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;162&lt;/td&gt;
+        &lt;td&gt;Jaden Ado&lt;/td&gt;
+        &lt;td&gt;49&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;411&lt;/td&gt;
+        &lt;td&gt;Bob Iton&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+
+---
+# Create Data
+
+
+```sql
+-- Create a table of criminals
+CREATE TABLE criminals (pid, name, age, sex, city, minor);
+INSERT INTO criminals VALUES (412, 'James Smith', 15, 'M', 'Santa Rosa', 1);
+INSERT INTO criminals VALUES (901, 'Gordon Ado', 32, 'F', 'San Francisco', 0);
+INSERT INTO criminals VALUES (512, 'Bill Byson', 21, 'M', 'Petaluma', 0);
+```
+
+
+
+
+
+
+
+
+---
+# View Table
+
+
+```sql
+--  Select all
+SELECT *
+
+-- From the criminals table
+FROM criminals
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+---
+# Update One Row
+
+
+```sql
+-- Update the criminals table
+UPDATE criminals
+
+-- To say city: 'Palo Alto'
+SET City='Palo Alto'
+
+-- If the prisoner ID number is 412
+WHERE pid=412;
+```
+
+
+
+
+
+
+
+
+---
+# Update Multiple Rows Using A Conditional
+
+
+```sql
+-- Update the criminals table
+UPDATE criminals
+
+-- To say minor: 'No'
+SET minor = 'No'
+
+-- If age is greater than 12
+WHERE age &gt; 12;
+```
+
+
+
+
+
+
+
+
+---
+# View Table Again
+
+
+```sql
+--  Select all
+SELECT *
+
+-- From the criminals table
+FROM criminals
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Palo Alto&lt;/td&gt;
+        &lt;td&gt;No&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;No&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;No&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+
+---
+# Create Data
+
+
+```sql
+-- Create a table of criminals
+CREATE TABLE criminals (pid, name, age, sex, city, minor);
+INSERT INTO criminals VALUES (412, 'James Smith', 15, 'M', 'Santa Rosa', 1);
+INSERT INTO criminals VALUES (234, NULL, 22, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (632, NULL, 23, 'F', 'San Francisco', 0);
+INSERT INTO criminals VALUES (901, 'Gordon Ado', 32, 'F', 'San Francisco', 0);
+INSERT INTO criminals VALUES (512, 'Bill Byson', 21, 'M', 'Petaluma', 0);
+```
+
+
+
+
+
+
+
+
+---
+# Select Name And Ages Only When The Name Is Known
+
+
+```sql
+--  Select name and average age,
+SELECT name, age
+
+--  from the table 'criminals',
+FROM criminals
+
+-- if age is not a null value
+WHERE name IS NOT NULL
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+
+---
+# Create Two Tables, Criminals And Crimes
+
+
+```sql
+-- Create a table of criminals
+CREATE TABLE criminals (pid, name, age, sex, city, minor);
+INSERT INTO criminals VALUES (412, 'James Smith', 15, 'M', 'Santa Rosa', 1);
+INSERT INTO criminals VALUES (234, 'Bill James', 22, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (632, 'Stacy Miller', 23, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (621, 'Betty Bob', NULL, 'F', 'Petaluma', 1);
+INSERT INTO criminals VALUES (162, 'Jaden Ado', 49, 'M', NULL, 0);
+INSERT INTO criminals VALUES (901, 'Gordon Ado', 32, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (512, 'Bill Byson', 21, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (411, 'Bob Iton', NULL, 'M', 'San Francisco', 0);
+
+-- Create a table of crimes
+CREATE TABLE crimes (cid, crime, city, pid_arrested, cash_stolen);
+INSERT INTO crimes VALUES (1, 'fraud', 'Santa Rosa', 412, 40000);
+INSERT INTO crimes VALUES (2, 'burglary', 'Petaluma', 234, 2000);
+INSERT INTO crimes VALUES (3, 'burglary', 'Santa Rosa', 632, 2000);
+INSERT INTO crimes VALUES (4, NULL, NULL, 621, 3500); 
+INSERT INTO crimes VALUES (5, 'burglary', 'Santa Rosa', 162, 1000); 
+INSERT INTO crimes VALUES (6, NULL, 'Petaluma', 901, 50000); 
+INSERT INTO crimes VALUES (7, 'fraud', 'San Francisco', 412, 60000); 
+INSERT INTO crimes VALUES (8, 'burglary', 'Santa Rosa', 512, 7000); 
+INSERT INTO crimes VALUES (9, 'burglary', 'San Francisco', 411, 3000); 
+INSERT INTO crimes VALUES (10, 'robbery', 'Santa Rosa', 632, 2500); 
+INSERT INTO crimes VALUES (11, 'robbery', 'Santa Rosa', 512, 3000);
+```
+
+
+
+
+
+
+
+
+---
+# Inner Join
+
+Returns all rows whose merge-on id appears in **both** tables.
+
+
+```sql
+-- Select everything
+SELECT *
+
+-- Left table
+FROM criminals
+
+-- Right table
+INNER JOIN crimes
+
+-- Merged on `pid` in the criminals table and `pid_arrested` in the crimes table
+ON criminals.pid=crimes.pid_arrested;
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+        &lt;th&gt;cid&lt;/th&gt;
+        &lt;th&gt;crime&lt;/th&gt;
+        &lt;th&gt;city_1&lt;/th&gt;
+        &lt;th&gt;pid_arrested&lt;/th&gt;
+        &lt;th&gt;cash_stolen&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+        &lt;td&gt;fraud&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;40000&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+        &lt;td&gt;7&lt;/td&gt;
+        &lt;td&gt;fraud&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;60000&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;234&lt;/td&gt;
+        &lt;td&gt;Bill James&lt;/td&gt;
+        &lt;td&gt;22&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+        &lt;td&gt;2&lt;/td&gt;
+        &lt;td&gt;burglary&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;234&lt;/td&gt;
+        &lt;td&gt;2000&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;Stacy Miller&lt;/td&gt;
+        &lt;td&gt;23&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+        &lt;td&gt;3&lt;/td&gt;
+        &lt;td&gt;burglary&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;2000&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;Stacy Miller&lt;/td&gt;
+        &lt;td&gt;23&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+        &lt;td&gt;10&lt;/td&gt;
+        &lt;td&gt;robbery&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;2500&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;621&lt;/td&gt;
+        &lt;td&gt;Betty Bob&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+        &lt;td&gt;4&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;621&lt;/td&gt;
+        &lt;td&gt;3500&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;162&lt;/td&gt;
+        &lt;td&gt;Jaden Ado&lt;/td&gt;
+        &lt;td&gt;49&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+        &lt;td&gt;5&lt;/td&gt;
+        &lt;td&gt;burglary&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;162&lt;/td&gt;
+        &lt;td&gt;1000&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+        &lt;td&gt;6&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;50000&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+        &lt;td&gt;8&lt;/td&gt;
+        &lt;td&gt;burglary&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;7000&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+        &lt;td&gt;11&lt;/td&gt;
+        &lt;td&gt;robbery&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;3000&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;411&lt;/td&gt;
+        &lt;td&gt;Bob Iton&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+        &lt;td&gt;9&lt;/td&gt;
+        &lt;td&gt;burglary&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;411&lt;/td&gt;
+        &lt;td&gt;3000&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+---
+# Left Join
+
+Returns all rows from the left table but only the rows from the right left that match the left table.
+
+
+```sql
+-- Select everything
+SELECT *
+
+-- Left table
+FROM criminals
+
+-- Right table
+LEFT JOIN crimes
+
+-- Merged on `pid` in the criminals table and `pid_arrested` in the crimes table
+ON criminals.pid=crimes.pid_arrested;
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+        &lt;th&gt;cid&lt;/th&gt;
+        &lt;th&gt;crime&lt;/th&gt;
+        &lt;th&gt;city_1&lt;/th&gt;
+        &lt;th&gt;pid_arrested&lt;/th&gt;
+        &lt;th&gt;cash_stolen&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+        &lt;td&gt;fraud&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;40000&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+        &lt;td&gt;7&lt;/td&gt;
+        &lt;td&gt;fraud&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;60000&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;234&lt;/td&gt;
+        &lt;td&gt;Bill James&lt;/td&gt;
+        &lt;td&gt;22&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+        &lt;td&gt;2&lt;/td&gt;
+        &lt;td&gt;burglary&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;234&lt;/td&gt;
+        &lt;td&gt;2000&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;Stacy Miller&lt;/td&gt;
+        &lt;td&gt;23&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+        &lt;td&gt;3&lt;/td&gt;
+        &lt;td&gt;burglary&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;2000&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;Stacy Miller&lt;/td&gt;
+        &lt;td&gt;23&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+        &lt;td&gt;10&lt;/td&gt;
+        &lt;td&gt;robbery&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;2500&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;621&lt;/td&gt;
+        &lt;td&gt;Betty Bob&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+        &lt;td&gt;4&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;621&lt;/td&gt;
+        &lt;td&gt;3500&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;162&lt;/td&gt;
+        &lt;td&gt;Jaden Ado&lt;/td&gt;
+        &lt;td&gt;49&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+        &lt;td&gt;5&lt;/td&gt;
+        &lt;td&gt;burglary&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;162&lt;/td&gt;
+        &lt;td&gt;1000&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+        &lt;td&gt;6&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;50000&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+        &lt;td&gt;8&lt;/td&gt;
+        &lt;td&gt;burglary&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;7000&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+        &lt;td&gt;11&lt;/td&gt;
+        &lt;td&gt;robbery&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;3000&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;411&lt;/td&gt;
+        &lt;td&gt;Bob Iton&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+        &lt;td&gt;9&lt;/td&gt;
+        &lt;td&gt;burglary&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;411&lt;/td&gt;
+        &lt;td&gt;3000&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+_Note: FULL OUTER and RIGHT JOIN are not shown here because they are not supported by the version of SQL (SQLite) used in this tutorial._
+
+
+---
+# Create Data
+
+
+```sql
+-- Create a table of criminals
+CREATE TABLE criminals (pid, name, age, sex, city, minor);
+INSERT INTO criminals VALUES (412, 'James Smith', 15, 'M', 'Santa Rosa', 1);
+INSERT INTO criminals VALUES (901, 'Gordon Ado', 32, 'F', 'San Francisco', 0);
+INSERT INTO criminals VALUES (512, 'Bill Byson', 21, 'M', 'Petaluma', 0);
+```
+
+
+
+
+
+
+
+
+---
+# View All Rows
+
+
+```sql
+--  Select all
+SELECT *
+
+-- From the criminals table
+FROM criminals
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+---
+# View Rows Where Age Is Greater Than 20 And City Is San Francisco
+
+
+```sql
+--  Select all unique
+SELECT distinct *
+
+-- From the criminals table
+FROM criminals
+
+-- Where age is greater than 20 and city is San Francisco
+WHERE age &gt; 20 AND city == 'San Francisco'
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+---
+# View Rows Where Age Is Greater Than 20 or City Is San Francisco
+
+
+```sql
+--  Select all unique
+SELECT distinct *
+
+-- From the criminals table
+FROM criminals
+
+-- Where age is greater than 20 and city is San Francisco
+WHERE age &gt; 20 OR city == 'San Francisco'
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+
+---
+# Create Data
+
+
+```sql
+-- Create a table of criminals
+CREATE TABLE criminals (pid, name, age, sex, city, minor);
+INSERT INTO criminals VALUES (412, 'James Smith', 15, 'M', 'Santa Rosa', 1);
+INSERT INTO criminals VALUES (234, 'Bill James', 22, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (632, 'Stacy Miller', 23, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (621, 'Betty Bob', NULL, 'F', 'Petaluma', 1);
+INSERT INTO criminals VALUES (162, 'Jaden Ado', 49, 'M', NULL, 0);
+INSERT INTO criminals VALUES (901, 'Gordon Ado', 32, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (512, 'Bill Byson', 21, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (411, 'Bob Iton', NULL, 'M', 'San Francisco', 0);
+```
+
+
+
+
+
+
+
+
+---
+# Select Based On The Result Of A Select
+
+
+```sql
+--  Select name and age,
+SELECT name, age
+
+--  from the table 'criminals',
+FROM criminals
+
+--  where age is greater than,
+WHERE age &gt; 
+     --  select age,
+    (SELECT age
+     --  from criminals
+     FROM criminals
+     --  where the name is 'James Smith'
+     WHERE name == 'James Smith')
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Bill James&lt;/td&gt;
+        &lt;td&gt;22&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Stacy Miller&lt;/td&gt;
+        &lt;td&gt;23&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Jaden Ado&lt;/td&gt;
+        &lt;td&gt;49&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+```
+
+
+
+
+    `'Connected: None@None'`
+
+
+
+---
+# Create Data
+
+
+```sql
+/* Create A Table Of Criminals */
+CREATE TABLE criminals (pid, name, age, sex, city, minor);
+INSERT INTO criminals VALUES (412, 'James Smith', 15, 'M', 'Santa Rosa', 1);
+INSERT INTO criminals VALUES (234, 'Bill James', 22, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (632, 'Stacy Miller', 23, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (621, 'Betty Bob', NULL, 'F', 'Petaluma', 1);
+INSERT INTO criminals VALUES (162, 'Jaden Ado', 49, 'M', NULL, 0);
+INSERT INTO criminals VALUES (901, 'Gordon Ado', 32, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (512, 'Bill Byson', 21, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (411, 'Bob Iton', NULL, 'M', 'San Francisco', 0);
+
+/* Create A Table Of Crimes */
+CREATE TABLE crimes (cid, crime, city, pid_arrested, cash_stolen);
+INSERT INTO crimes VALUES (1, 'fraud', 'Santa Rosa', 412, 40000);
+INSERT INTO crimes VALUES (1, 'burglary', 'Petaluma', 234, 2000);
+INSERT INTO crimes VALUES (1, 'burglary', 'Santa Rosa', 632, 2000);
+INSERT INTO crimes VALUES (1, 'larcony', 'Petaluma', 621, 3500); 
+INSERT INTO crimes VALUES (1, 'burglary', 'Santa Rosa', 162, 1000); 
+INSERT INTO crimes VALUES (1, 'larcony', 'Petaluma', 901, 50000); 
+INSERT INTO crimes VALUES (1, 'fraud', 'San Francisco', 412, 60000); 
+INSERT INTO crimes VALUES (1, 'burglary', 'Santa Rosa', 512, 7000); 
+INSERT INTO crimes VALUES (1, 'burglary', 'San Francisco', 411, 3000); 
+INSERT INTO crimes VALUES (1, 'robbery', 'Santa Rosa', 632, 2500); 
+INSERT INTO crimes VALUES (1, 'robbery', 'Santa Rosa', 512, 3000);
+```
+
+    Done.
+    1 rows affected.
+    1 rows affected.
+    1 rows affected.
+    1 rows affected.
+    1 rows affected.
+    1 rows affected.
+    1 rows affected.
+    1 rows affected.
+    Done.
+    1 rows affected.
+    1 rows affected.
+    1 rows affected.
+    1 rows affected.
+    1 rows affected.
+    1 rows affected.
+    1 rows affected.
+    1 rows affected.
+    1 rows affected.
+    1 rows affected.
+    1 rows affected.
+
+
+
+
+
+
+
+
+
+---
+# View Both Tables
+
+
+```sql
+-- Select everything
+SELECT *
+
+-- From the table 'criminals'
+FROM criminals
+```
+
+    Done.
+
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;234&lt;/td&gt;
+        &lt;td&gt;Bill James&lt;/td&gt;
+        &lt;td&gt;22&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;Stacy Miller&lt;/td&gt;
+        &lt;td&gt;23&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;621&lt;/td&gt;
+        &lt;td&gt;Betty Bob&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;162&lt;/td&gt;
+        &lt;td&gt;Jaden Ado&lt;/td&gt;
+        &lt;td&gt;49&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;411&lt;/td&gt;
+        &lt;td&gt;Bob Iton&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+
+```sql
+-- Select everything
+SELECT *
+
+-- From the table 'crimes'
+FROM crimes
+```
+
+    Done.
+
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;cid&lt;/th&gt;
+        &lt;th&gt;crime&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;pid_arrested&lt;/th&gt;
+        &lt;th&gt;cash_stolen&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;1&lt;/td&gt;
+        &lt;td&gt;fraud&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;40000&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;1&lt;/td&gt;
+        &lt;td&gt;burglary&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;234&lt;/td&gt;
+        &lt;td&gt;2000&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;1&lt;/td&gt;
+        &lt;td&gt;burglary&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;2000&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;1&lt;/td&gt;
+        &lt;td&gt;larcony&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;621&lt;/td&gt;
+        &lt;td&gt;3500&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;1&lt;/td&gt;
+        &lt;td&gt;burglary&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;162&lt;/td&gt;
+        &lt;td&gt;1000&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;1&lt;/td&gt;
+        &lt;td&gt;larcony&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;50000&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;1&lt;/td&gt;
+        &lt;td&gt;fraud&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;60000&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;1&lt;/td&gt;
+        &lt;td&gt;burglary&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;7000&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;1&lt;/td&gt;
+        &lt;td&gt;burglary&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;411&lt;/td&gt;
+        &lt;td&gt;3000&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;1&lt;/td&gt;
+        &lt;td&gt;robbery&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;2500&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;1&lt;/td&gt;
+        &lt;td&gt;robbery&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;3000&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+
+---
+# Create Data
+
+
+```sql
+-- Create a table of criminals
+CREATE TABLE criminals (pid, name, age, sex, city, minor);
+INSERT INTO criminals VALUES (412, 'James Smith', 15, 'M', 'Santa Rosa', 1);
+INSERT INTO criminals VALUES (234, 'Bill James', 22, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (632, 'Stacy Miller', 23, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (621, 'Betty Bob', NULL, 'F', 'Petaluma', 1);
+INSERT INTO criminals VALUES (162, 'Jaden Ado', 49, 'M', NULL, 0);
+INSERT INTO criminals VALUES (901, 'Gordon Ado', 32, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (512, 'Bill Byson', 21, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (411, 'Bob Iton', NULL, 'M', 'San Francisco', 0);
+```
+
+
+
+
+
+
+
+
+---
+# View Table
+
+
+```sql
+--  Select all
+SELECT *
+
+-- From the criminals table
+FROM criminals
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;234&lt;/td&gt;
+        &lt;td&gt;Bill James&lt;/td&gt;
+        &lt;td&gt;22&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;Stacy Miller&lt;/td&gt;
+        &lt;td&gt;23&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;621&lt;/td&gt;
+        &lt;td&gt;Betty Bob&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;162&lt;/td&gt;
+        &lt;td&gt;Jaden Ado&lt;/td&gt;
+        &lt;td&gt;49&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;411&lt;/td&gt;
+        &lt;td&gt;Bob Iton&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+---
+# Drop Row Based On A Conditional
+
+
+```sql
+--  Select all
+SELECT *
+
+-- From the criminals table
+FROM criminals
+
+-- Only return the first two rows
+LIMIT 2;
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;234&lt;/td&gt;
+        &lt;td&gt;Bill James&lt;/td&gt;
+        &lt;td&gt;22&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+
+---
+# Create Two Tables, Criminals And Crimes
+
+
+```sql
+-- Create a table of criminals
+CREATE TABLE criminals (pid, name, age, sex, city, minor);
+INSERT INTO criminals VALUES (412, 'James Smith', 15, 'M', 'Santa Rosa', 1);
+INSERT INTO criminals VALUES (234, 'Bill James', 22, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (632, 'Stacy Miller', 23, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (621, 'Betty Bob', NULL, 'F', 'Petaluma', 1);
+INSERT INTO criminals VALUES (162, 'Jaden Ado', 49, 'M', NULL, 0);
+INSERT INTO criminals VALUES (901, 'Gordon Ado', 32, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (512, 'Bill Byson', 21, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (411, 'Bob Iton', NULL, 'M', 'San Francisco', 0);
+
+-- Create a table of crimes
+CREATE TABLE crimes (cid, crime, city, pid_arrested, cash_stolen);
+INSERT INTO crimes VALUES (1, 'fraud', 'Santa Rosa', 412, 40000);
+INSERT INTO crimes VALUES (2, 'burglary', 'Petaluma', 234, 2000);
+INSERT INTO crimes VALUES (3, 'burglary', 'Santa Rosa', 632, 2000);
+INSERT INTO crimes VALUES (4, NULL, NULL, 621, 3500); 
+INSERT INTO crimes VALUES (5, 'burglary', 'Santa Rosa', 162, 1000); 
+INSERT INTO crimes VALUES (6, NULL, 'Petaluma', 901, 50000); 
+INSERT INTO crimes VALUES (7, 'fraud', 'San Francisco', 412, 60000); 
+INSERT INTO crimes VALUES (8, 'burglary', 'Santa Rosa', 512, 7000); 
+INSERT INTO crimes VALUES (9, 'burglary', 'San Francisco', 411, 3000); 
+INSERT INTO crimes VALUES (10, 'robbery', 'Santa Rosa', 632, 2500); 
+INSERT INTO crimes VALUES (11, 'robbery', 'Santa Rosa', 512, 3000);
+```
+
+
+
+
+
+
+
+
+---
+# View All Unique City Names From Both Tables
+
+
+```sql
+-- Select city name
+SELECT city 
+
+-- From criminals table
+FROM criminals
+
+-- Then combine with
+UNION
+
+-- Select city names
+SELECT city 
+
+-- From crimes table
+FROM crimes;
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;city&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;None&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+---
+# View All City Names From Both Tables
+
+
+```sql
+-- Select city name
+SELECT city 
+
+-- From criminals table
+FROM criminals
+
+-- Then combine with
+UNION ALL
+
+-- Select city names
+SELECT city 
+
+-- From crimes table
+FROM crimes;
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;city&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;None&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;None&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+
+---
+# Create Data
+
+
+```sql
+-- Create a table of criminals
+CREATE TABLE criminals (pid, name, age, sex, city, minor);
+INSERT INTO criminals VALUES (412, 'James Smith', 15, 'M', 'Santa Rosa', 1);
+INSERT INTO criminals VALUES (412, 'James Smith', 15, 'M', 'Santa Rosa', 1);
+INSERT INTO criminals VALUES (412, 'James Smith', 15, 'M', 'Santa Rosa', 1);
+INSERT INTO criminals VALUES (901, 'Gordon Ado', 32, 'F', 'San Francisco', 0);
+INSERT INTO criminals VALUES (512, 'Bill Byson', 21, 'M', 'Petaluma', 0);
+```
+
+
+
+
+
+
+
+
+---
+# View All Rows
+
+Notice that 'James Smith' appears three times
+
+
+```sql
+--  Select all
+SELECT *
+
+-- From the criminals table
+FROM criminals
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+---
+# View Unique Rows
+
+
+```sql
+--  Select all unique
+SELECT distinct *
+
+-- From the criminals table
+FROM criminals
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+
+---
+# Create Data
+
+
+```sql
+-- Create a table of criminals
+CREATE TABLE criminals (pid, name, age, sex, city, minor);
+INSERT INTO criminals VALUES (412, 'James Smith', 15, 'M', 'Santa Rosa', 1);
+INSERT INTO criminals VALUES (234, 'Bill Bayes', 22, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (632, 'Jack Killer', 23, 'F', 'San Francisco', 0);
+INSERT INTO criminals VALUES (901, 'Gordon Ado', 32, 'F', 'San Francisco', 0);
+INSERT INTO criminals VALUES (512, 'Bill Byson', 21, 'M', 'Petaluma', 0);
+```
+
+
+
+
+
+
+
+
+---
+# View All Rows
+
+
+```sql
+--  Select all
+SELECT *
+
+-- From the criminals table
+FROM criminals
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;234&lt;/td&gt;
+        &lt;td&gt;Bill Bayes&lt;/td&gt;
+        &lt;td&gt;22&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;Jack Killer&lt;/td&gt;
+        &lt;td&gt;23&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+---
+# View Rows Where Age Is Greater Than 30
+
+
+```sql
+--  Select all
+SELECT distinct *
+
+-- From the criminals table
+FROM criminals
+
+-- Where age is greater than 30
+WHERE age &gt; 30
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+---
+# View Rows Where Age Is Greater Than Or Equal To 23
+
+
+```sql
+--  Select all
+SELECT distinct *
+
+-- From the criminals table
+FROM criminals
+
+-- Where age is greater than 23
+WHERE age &gt;= 23
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;Jack Killer&lt;/td&gt;
+        &lt;td&gt;23&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+---
+# View Rows Where Age Is 23
+
+
+```sql
+--  Select all
+SELECT distinct *
+
+-- From the criminals table
+FROM criminals
+
+-- Where age is greater than 23
+WHERE age = 23
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;Jack Killer&lt;/td&gt;
+        &lt;td&gt;23&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+---
+# View Rows Where Age Is Not 23
+
+
+```sql
+--  Select all
+SELECT distinct *
+
+-- From the criminals table
+FROM criminals
+
+-- Where age is greater than 23
+WHERE age &lt;&gt; 23
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;234&lt;/td&gt;
+        &lt;td&gt;Bill Bayes&lt;/td&gt;
+        &lt;td&gt;22&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+---
+# View Rows Where Name Begins With 'J'
+
+
+```sql
+--  Select all
+SELECT distinct *
+
+-- From the criminals table
+FROM criminals
+
+-- Where name starts with 'J'
+WHERE name LIKE 'J%'
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;Jack Killer&lt;/td&gt;
+        &lt;td&gt;23&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+---
+# View Rows Where Name Contains The String 'ames'
+
+
+```sql
+--  Select all
+SELECT distinct *
+
+-- From the criminals table
+FROM criminals
+
+-- Where name contains the string 'ames'
+WHERE name LIKE '%ames%'
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+
+---
+# Create Data
+
+
+```sql
+-- Create a table of criminals
+CREATE TABLE criminals (pid, name, age, sex, city, minor);
+INSERT INTO criminals VALUES (412, 'James Smith', 15, 'M', 'Santa Rosa', 1);
+INSERT INTO criminals VALUES (234, 'Bill James', 22, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (632, 'Stacy Miller', 23, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (621, 'Betty Bob', NULL, 'F', 'Petaluma', 1);
+INSERT INTO criminals VALUES (162, 'Jaden Ado', 49, 'M', NULL, 0);
+INSERT INTO criminals VALUES (901, 'Gordon Ado', 32, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (512, 'Bill Byson', 21, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (411, 'Bob Iton', NULL, 'M', 'San Francisco', 0);
+```
+
+
+
+
+
+
+
+
+---
+# View Table
+
+
+```sql
+--  Select all
+SELECT *
+
+-- From the criminals table
+FROM criminals
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;234&lt;/td&gt;
+        &lt;td&gt;Bill James&lt;/td&gt;
+        &lt;td&gt;22&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;Stacy Miller&lt;/td&gt;
+        &lt;td&gt;23&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;621&lt;/td&gt;
+        &lt;td&gt;Betty Bob&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;162&lt;/td&gt;
+        &lt;td&gt;Jaden Ado&lt;/td&gt;
+        &lt;td&gt;49&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;411&lt;/td&gt;
+        &lt;td&gt;Bob Iton&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+---
+# Select Rows With Names Starting With `G`
+
+
+```sql
+--  Select all
+SELECT *
+
+-- From the criminals table
+FROM criminals
+
+-- If name starts with G
+WHERE name LIKE 'G%'
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+---
+# Select Rows With Names Ending With `o`
+
+
+```sql
+--  Select all
+SELECT *
+
+-- From the criminals table
+FROM criminals
+
+-- If name starts ends with o
+WHERE name LIKE '%o'
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;162&lt;/td&gt;
+        &lt;td&gt;Jaden Ado&lt;/td&gt;
+        &lt;td&gt;49&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+---
+# Select Rows With Names Starting With Any Character, Then `ordon`
+
+
+```sql
+--  Select all
+SELECT *
+
+-- From the criminals table
+FROM criminals
+
+-- If name starts with any character then continues with 'ordon'
+WHERE name LIKE '_ordon%'
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+
+---
+# Create Data
+
+
+```sql
+-- Create a table of criminals
+CREATE TABLE criminals (pid, name, age, sex, city, minor);
+INSERT INTO criminals VALUES (412, 'James Smith', 15, 'M', 'Santa Rosa', 1);
+INSERT INTO criminals VALUES (234, 'Bill James', 22, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (632, 'Stacy Miller', 23, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (621, 'Betty Bob', NULL, 'F', 'Petaluma', 1);
+INSERT INTO criminals VALUES (162, 'Jaden Ado', 49, 'M', NULL, 0);
+INSERT INTO criminals VALUES (901, 'Gordon Ado', 32, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (512, 'Bill Byson', 21, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (411, 'Bob Iton', NULL, 'M', 'San Francisco', 0);
+```
+
+
+
+
+
+
+
+
+---
+# Select Rows That Contain An Item In A List
+
+
+```sql
+-- Select everything
+SELECT *
+
+-- From the table 'criminals'
+FROM criminals
+
+-- Where the city is any of these cities
+WHERE city IN ('Santa Rosa', 'Petaluma');
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;234&lt;/td&gt;
+        &lt;td&gt;Bill James&lt;/td&gt;
+        &lt;td&gt;22&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;Stacy Miller&lt;/td&gt;
+        &lt;td&gt;23&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;621&lt;/td&gt;
+        &lt;td&gt;Betty Bob&lt;/td&gt;
+        &lt;td&gt;None&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+
+---
+# Create Data
+
+
+```sql
+-- Create a table of criminals
+CREATE TABLE criminals (pid, name, age, sex, city, minor);
+INSERT INTO criminals VALUES (412, 'James Smith', 15, 'M', 'Santa Rosa', 1);
+INSERT INTO criminals VALUES (234, 'Bill James', 22, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (632, 'Stacy Miller', 23, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (621, 'Betty Bob', NULL, 'F', 'Petaluma', 1);
+INSERT INTO criminals VALUES (162, 'Jaden Ado', 49, 'M', NULL, 0);
+INSERT INTO criminals VALUES (901, 'Gordon Ado', 32, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (512, 'Bill Byson', 21, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (411, 'Bob Iton', NULL, 'M', 'San Francisco', 0);
+```
+
+
+
+
+
+
+
+
+---
+# Select Every Row Where Age Is Between Two Values
+
+
+```sql
+-- Select everything
+SELECT *
+
+-- From the table 'criminals'
+FROM criminals
+
+-- Where 
+WHERE age BETWEEN 12 AND 18
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+
+---
+# Create Data
+
+
+```sql
+-- Create a table of criminals
+CREATE TABLE criminals (pid, name, age, sex, city, minor);
+INSERT INTO criminals VALUES (412, 'James Smith', 15, 'M', 'Santa Rosa', 1);
+INSERT INTO criminals VALUES (234, 'Bill James', 22, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (632, 'Stacy Miller', 23, 'F', 'San Francisco', 0);
+INSERT INTO criminals VALUES (901, 'Gordon Ado', 32, 'F', 'San Francisco', 0);
+INSERT INTO criminals VALUES (512, 'Bill Byson', 21, 'M', 'Petaluma', 0);
+```
+
+
+
+
+
+
+
+
+---
+# Sort By Ascending Age And Then Alphabetically By Name
+
+
+```sql
+--  Select all unique
+SELECT distinct *
+
+-- From the criminals table
+FROM criminals
+
+-- Sort by ascending age
+ORDER BY age ASC, name
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;234&lt;/td&gt;
+        &lt;td&gt;Bill James&lt;/td&gt;
+        &lt;td&gt;22&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;Stacy Miller&lt;/td&gt;
+        &lt;td&gt;23&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+
+---
+# Create Data
+
+
+```sql
+-- Create a table of criminals
+CREATE TABLE criminals (pid, name, age, sex, city, minor);
+INSERT INTO criminals VALUES (412, 'James Smith', 15, 'M', 'Santa Rosa', 1);
+INSERT INTO criminals VALUES (234, 'Bill James', 22, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (632, 'Stacy Miller', 23, 'F', 'San Francisco', 0);
+INSERT INTO criminals VALUES (901, 'Gordon Ado', 32, 'F', 'San Francisco', 0);
+INSERT INTO criminals VALUES (512, 'Bill Byson', 21, 'M', 'Petaluma', 0);
+```
+
+
+
+
+
+
+
+
+---
+# View All Rows
+
+
+```sql
+--  Select all
+SELECT *
+
+-- From the criminals table
+FROM criminals
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;234&lt;/td&gt;
+        &lt;td&gt;Bill James&lt;/td&gt;
+        &lt;td&gt;22&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;Stacy Miller&lt;/td&gt;
+        &lt;td&gt;23&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+---
+# Sort By Ascending Age
+
+
+```sql
+--  Select all unique
+SELECT distinct *
+
+-- From the criminals table
+FROM criminals
+
+-- Sort by ascending age
+ORDER BY age ASC
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;234&lt;/td&gt;
+        &lt;td&gt;Bill James&lt;/td&gt;
+        &lt;td&gt;22&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;Stacy Miller&lt;/td&gt;
+        &lt;td&gt;23&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+---
+# Sort By Descending Age
+
+
+```sql
+--  Select all unique
+SELECT distinct *
+
+-- From the criminals table
+FROM criminals
+
+-- Sort by descending age
+ORDER BY age DESC
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;Stacy Miller&lt;/td&gt;
+        &lt;td&gt;23&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;234&lt;/td&gt;
+        &lt;td&gt;Bill James&lt;/td&gt;
+        &lt;td&gt;22&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+---
+# Sort Alphabetically
+
+
+```sql
+--  Select all unique
+SELECT distinct *
+
+-- From the criminals table
+FROM criminals
+
+-- Sort by name
+ORDER BY name
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;234&lt;/td&gt;
+        &lt;td&gt;Bill James&lt;/td&gt;
+        &lt;td&gt;22&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;Stacy Miller&lt;/td&gt;
+        &lt;td&gt;23&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+
+---
+# Create Data
+
+
+```sql
+-- Create a table of criminals
+CREATE TABLE criminals (pid, name, age, sex, city, minor);
+INSERT INTO criminals VALUES (412, 'James Smith', 15, 'M', 'Santa Rosa', 1);
+INSERT INTO criminals VALUES (234, 'Bill James', 22, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (632, 'Stacy Miller', 23, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (621, 'Betty Bob', NULL, 'F', 'Petaluma', 1);
+INSERT INTO criminals VALUES (162, 'Jaden Ado', 49, 'M', NULL, 0);
+INSERT INTO criminals VALUES (901, 'Gordon Ado', 32, 'F', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (512, 'Bill Byson', 21, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (411, 'Bob Iton', NULL, 'M', 'San Francisco', 0);
+```
+
+
+
+
+
+
+
+
+---
+# Create A View
+
+
+```sql
+-- Create a view called 'Santa Rosa'
+CREATE VIEW [Santa Rosa] AS
+
+-- That contains everything
+SELECT *
+
+-- From the table called 'criminals'
+FROM criminals
+
+-- If the city is 'Santa Rosa'
+WHERE city = 'Santa Rosa'
+```
+
+
+
+
+
+
+
+
+---
+# View The View
+
+(I know, I know, stupid title)
+
+
+```sql
+-- Select everything
+SELECT * 
+
+-- From the view called [Santa Rosa]
+FROM [Santa Rosa]
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;pid&lt;/th&gt;
+        &lt;th&gt;name&lt;/th&gt;
+        &lt;th&gt;age&lt;/th&gt;
+        &lt;th&gt;sex&lt;/th&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;minor&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;412&lt;/td&gt;
+        &lt;td&gt;James Smith&lt;/td&gt;
+        &lt;td&gt;15&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;234&lt;/td&gt;
+        &lt;td&gt;Bill James&lt;/td&gt;
+        &lt;td&gt;22&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;632&lt;/td&gt;
+        &lt;td&gt;Stacy Miller&lt;/td&gt;
+        &lt;td&gt;23&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;901&lt;/td&gt;
+        &lt;td&gt;Gordon Ado&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+        &lt;td&gt;F&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;512&lt;/td&gt;
+        &lt;td&gt;Bill Byson&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+        &lt;td&gt;M&lt;/td&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+
+---
+# Create Data
+
+
+```sql
+-- Create a table of criminals
+CREATE TABLE criminals (pid, name, age, sex, city, minor);
+INSERT INTO criminals VALUES (412, 'James Smith', 15, 'M', 'Santa Rosa', 1);
+INSERT INTO criminals VALUES (234, 'Bill James', 22, 'M', 'Santa Rosa', 0);
+INSERT INTO criminals VALUES (632, 'Stacy Miller', 23, 'F', 'San Francisco', 0);
+INSERT INTO criminals VALUES (901, 'Gordon Ado', 32, 'F', 'San Francisco', 0);
+INSERT INTO criminals VALUES (512, 'Bill Byson', 21, 'M', 'Petaluma', 0);
+```
+
+
+
+
+
+
+
+
+---
+# View Average Ages By City
+
+
+```sql
+--  Select name and average age,
+SELECT city, avg(age)
+
+--  from the table 'criminals',
+FROM criminals
+
+-- after grouping by city
+GROUP BY city
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;avg(age)&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;21.0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;27.5&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;18.5&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+---
+# View Max Age By City
+
+
+```sql
+--  Select name and average age,
+SELECT city, max(age)
+
+--  from the table 'criminals',
+FROM criminals
+
+-- after grouping by city
+GROUP BY city
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;max(age)&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;21&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;32&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;22&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+---
+# View Count Of Criminals By City
+
+
+```sql
+--  Select name and average age,
+SELECT city, count(name)
+
+--  from the table 'criminals',
+FROM criminals
+
+-- after grouping by city
+GROUP BY city
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;count(name)&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;1&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;2&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;2&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+
+
+---
+# View Total Age By City
+
+
+```sql
+--  Select name and average age,
+SELECT city, total(age)
+
+--  from the table 'criminals',
+FROM criminals
+
+-- after grouping by city
+GROUP BY city
+```
+
+
+
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;city&lt;/th&gt;
+        &lt;th&gt;total(age)&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Petaluma&lt;/td&gt;
+        &lt;td&gt;21.0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;San Francisco&lt;/td&gt;
+        &lt;td&gt;55.0&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Santa Rosa&lt;/td&gt;
+        &lt;td&gt;37.0&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false,
+"ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
