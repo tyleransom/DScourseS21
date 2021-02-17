@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Lecture 7</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Tyler Ransom" />
+    <link href="07slides_files/remark-css-0.0.1/default.css" rel="stylesheet" />
+    <link href="07slides_files/remark-css-0.0.1/metropolis.css" rel="stylesheet" />
+    <link href="07slides_files/remark-css-0.0.1/metropolis-fonts.css" rel="stylesheet" />
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+            TeX: { equationNumbers: { autoNumber: "AMS" } },
+        });
+    </script>
+        <style>
+        .mjx-mrow a {
+            color: black;
+            pointer-events: none;
+            cursor: default;
+        }
+    </style>
+    <link rel="stylesheet" href="ou-colors.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# Lecture 7
+## Hadoop and Spark
+### Tyler Ransom
+### ECON 5253, University of Oklahoma
+
+---
+
+
+
+
+# Plan for the day
+
+- How RDD systems (Hadoop, Spark, ...) work
+
+- How to run computing jobs on OSCER
+
+---
+# What is Hadoop?
+
+- Hadoop is a .hi[distributed file system] created by Apache Software Foundation  
+
+- It allows for efficient processing of big data sets by distributing data processing computations across a cluster of computers
+
+- It has 3 properties:
+    - open source
+    
+    - scalable
+    
+    - fault tolerant
+
+---
+# Hadoop framework
+
+The Hadoop framework is comprised of the following elements:
+    
+- .hi[Hadoop Common:] the base set of libraries
+
+- .hi[Hadoop Distributed File System (HDFS):] file system that stores data on many machines
+
+- .hi[Hadoop YARN:] resource manager for Hadoop jobs ("YARN" stands for "Yet Another Resource Negotiator")
+
+- .hi[Hadoop MapReduce:] an implementation of the MapReduce programming model for large-scale data processing
+
+---
+# What is MapReduce?
+
+- "MapReduce" is a general programming model for distributing complex or intensive computations across multiple machines.
+
+- The main workflow of the MapReduce model is:
+    
+1. .hi[Split:] divide your huge dataset into K chunks / distribute across machines
+
+2. .hi[Map:] apply some function (in parallel) to each of the chunked-up datasets 
+    * e.g. count words, shuffle, sort, ...
+    
+3. .hi[Reduce:] reduce the number of chunks in the dataset by combining chunks either by merging the datasets back together, or performing some other aggregating operation (like addition or averaging)
+
+---
+# MapReduce visualization
+
+.center[
+![MapReduce1](mapreduce_work.jpg)
+]
+
+---
+# MapReduce visualization
+
+.center[
+![MapReduce2](marylittlelamb_mapreduce.png)
+]
+
+---
+# Other Apache products
+
+In addition to the above four elements of the Hadoop framework, Apache has continued to create higher-level programs for a more tailored Big Data experience:
+
+- .hi[Pig:] a SQL-style language for MapReduce tasks (think of it as a SQL-style shell scripting language for MapReduce)
+- .hi[Hive:] a SQL-style interface to query data stored in the HDFS
+- .hi[Spark:] an innovation on Hadoop MapReduce that relaxes some constraints on how MapReduce jobs must be structured
+
+All of the Apache products work in the HDFS environment.
+
+.hi[Trivia:] Hadoop was created in 2006 following the original MapReduce programming model and the original Google File System, both of which were created by Google in the early 2000s.
+
+---
+# What is Spark?
+
+- Spark was released in 2010 as a generalization of the MapReduce concept for HDFS 
+
+- Essentially, the creators of Spark wanted to allow for more types of operations to fit into the MapReduce model
+
+---
+# Spark's innovations over Hadoop
+
+* faster
+* consumes fewer resources
+* includes APIs to interface with common programming languages
+* simplified user experience
+* interface with Machine Learning libraries
+* handling of streamed data (e.g. twitter, Fb timelines which are continuously generated)
+* includes an interactive prompt (in Scala)
+
+Spark does all this while also satisfying the primary goals of Hadoop (open source, scalable, and fault tolerant)
+
+---
+# Spark APIs
+
+Spark's API has been developed for the following languages:
+    
+* R (SparkR, sparklyr)
+* Python (PySpark)
+* Julia (Spark.jl)
+* SQL (spark-sql)
+* Java
+* Scala
+
+Many of these are included on the OSCER computing cluster and can be run interactively
+
+---
+# RDDs
+
+- RDDs (Resilient Distributed Datasets) are the fundamental units of data in Spark
+
+- RDDs can be created in three ways:
+    
+1. By creating a parallelized collection
+
+2. By converting a CSV, JSON, TSV, etc. to an RDD
+
+3. By applying a transformation operation to an existing RDD
+
+---
+# Immutability of RDDs
+
+- RDDs are .hi[immutable]! 
+
+- This means they cannot be modified 
+
+- This turns out to be a highly efficient way of organizing computing operations, both in terms of minimizing computational burden and in terms of maintaining fault tolerance
+
+---
+# Usefulness of immutability?
+
+- If RDDs can't be modified, how can we apply functions to them? 
+
+- There are two (non-mututally-exclusive) ways:
+
+1. .hi[Transformation:] create a new RDD which is a copy of the previous RDD, but with the new operation applied
+    * e.g. `map`
+    * e.g. returning unique values of the source dataset
+    * e.g. sorting by a key
+2. .hi[Action:] return some final result (either to the node we originated from, or to an external file)
+    * e.g. `reduce`
+    * e.g. returning the first `n` elements of the dataset
+    * e.g. returning a random sample of the dataset
+
+---
+# Hadoop Example: *Pride &amp; Prejudice*
+    
+* We'll walk through an example on OSCER that uses Java to call Hadoop and count instances of every word in *Pride &amp; Prejudice* using 20 nodes and output the result to a text file
+
+* See in-class demonstration for more details
+
+---
+# Spark Example: Computing `\(\pi\)`
+
+- We can derive pi by drawing pairs of random numbers between 0 and 1 and counting what fraction of them are less than or equal to the curve `x^2 + y^2 = 1`
+
+- Then, because we know that the area of a circle is `pi*radius^2`, and we know that the radius of `x^2 + y^2 = 1` is 1, we can multiply the area we computed by 4 (since our random numbers only fall in the 1st Quadrant) to get an estimate of pi
+
+---
+# Computing `\(\pi\)`: visualization
+
+.center[
+![MonteCarlo](../Graphics/MCexample10.png)
+]
+
+---
+# PySpark code
+
+.scroll-box-18[
+```python
+from __future__ import print_function
+
+import sys
+from random import random
+from operator import add
+
+from pyspark.sql import SparkSession
+
+
+if __name__ == "__main__":
+    """
+        Usage: pi [partitions]
+    """
+    spark = SparkSession\
+        .builder\
+        .appName("PythonPi")\
+        .getOrCreate()
+
+    partitions = int(sys.argv[1]) if len(sys.argv) &gt; 1 else 2
+    n = 100000 * partitions
+
+    def f(_):
+        x = random() * 2 - 1
+        y = random() * 2 - 1
+        return 1 if x ** 2 + y ** 2 &lt;= 1 else 0
+
+    count = spark.sparkContext.parallelize(range(1, n + 1), partitions).map(f).reduce(add)
+    print("Pi is roughly %f" % (4.0 * count / n))
+
+    spark.stop()
+```
+]
+
+
+---
+# Useful links
+
+* [Quora: Hadoop vs. Spark](https://www.quora.com/What-is-the-difference-between-Hadoop-and-Spark)
+
+* [Spark basics](https://data-flair.training/blogs/what-is-spark/)
+
+* [Spark workshop slides](https://stanford.edu/~rezab/sparkclass/slides/itas_workshop.pdf)
+
+* [Hadoop wikipedia page](https://en.wikipedia.org/wiki/Apache_Hadoop)
+
+* [MapReduce wikipedia page](https://en.wikipedia.org/wiki/MapReduce)
+
+* [SparkR demo](https://rpubs.com/wendyu/sparkr)
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false,
+"ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
