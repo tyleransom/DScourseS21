@@ -58,13 +58,13 @@
 \usepackage{breakurl}    % Allows urls to wrap, including hyperref
 
 \pagestyle{head}
-\firstpageheader{\textbf{\class\ - \term}}{\textbf{\examnum}}{\textbf{Due: Feb. 23\\ beginning of class}}
-\runningheader{\textbf{\class\ - \term}}{\textbf{\examnum}}{\textbf{Due: Feb. 23\\ beginning of class}}
+\firstpageheader{\textbf{\class\ - \term}}{\textbf{\examnum}}{\textbf{Due: Feb. 25\\ beginning of class}}
+\runningheader{\textbf{\class\ - \term}}{\textbf{\examnum}}{\textbf{Due: Feb. 25\\ beginning of class}}
 \runningheadrule
 
 \newcommand{\class}{Econ 5253}
 \newcommand{\term}{Spring 2021}
-\newcommand{\examdate}{Due: February 23, 2021}
+\newcommand{\examdate}{Due: February 25, 2021}
 % \newcommand{\timelimit}{30 Minutes}
 
 \noprintanswers                         % Uncomment for no solutions version
@@ -85,7 +85,7 @@ As with the previous problem sets, you will submit this problem set by pushing t
 \begin{questions}
 \question Log in to OSCER, change to the directory where you cloned your forked GitHub repository (probably \texttt{\textasciitilde/DScourseS21}), and make sure the OSCER version of your repository is synchronized with what is listed on GitHub by issuing a pull. That is, type \texttt{git pull origin master} from your OSCER \texttt{DScourseS21} folder. 
 
-\question Synchronize your fork with the class repository by doing a \texttt{git fetch upstream} and then merging the resulting branch. 
+\question Synchronize your fork with the class repository by doing a \texttt{git pull upstream master}. 
 \begin{itemize}
 	\item Before doing this, make sure that you have set your default git text editor to Nano (and not Vim) by typing the following at the command line: \texttt{git config -{}-global core.editor "nano"}
 \end{itemize}
@@ -122,25 +122,27 @@ Type \texttt{sparkR} at the command line and you should be able to use Spark's R
 \question This question will help you get comfortable working with (and converting from) JSON data, which is the most common data format for APIs that house web data.
 
 \begin{parts}
-	\part Download the following file from within R, Python, or Julia: \url{http://api.fantasy.nfl.com/v1/players/stats?statType=seasonStats\&season=2010\&week=1\&format=json}
+    \part Download the following file from within R, Python, or Julia: \url{"https://www.vizgr.org/historical-events/search.php?format=json&begin_date=00000101&end_date=20210219&lang=en"}
 
-	The way to do this is to call \texttt{wget} (which is a system command) from inside R/Python/Julia. Note that we want to specify the local name of this file (call it \texttt{nfl.json}). To do that, we say \texttt{wget -O filename.extension "urlpath"} (note: that's a letter O, not a number 0; also pay attention to the quotation marks).
+    This website lists historical events from Jan 1, 0000 until Feb 19, 2021.
+
+	The way to do this is to call \texttt{wget} (which is a system command) from inside R/Python/Julia. Note that we want to specify the local name of this file (call it \texttt{dates.json}). To do that, we say \texttt{wget -O filename.extension "urlpath"} (note: that's a letter O, not a number 0; also pay attention to the quotation marks).
 
 	\begin{itemize}
-		\item R sytnax is: \texttt{system(''linux shell command'')}
-	\item Python sytnax is: \texttt{call([''linux'', ''shell'', ''command''])}\footnote{This requires the \texttt{call} function from the \texttt{import} library. Also note that spaces in the command need to be in separate strings.}
+		\item R sytnax is: \texttt{system('linux shell command')}
+	    \item Python sytnax is: \texttt{call([''linux'', ''shell'', ''command''])}\footnote{This requires the \texttt{call} function from the \texttt{import} library. Also note that spaces in the command need to be in separate strings.}
 		\item Julia sytnax is: \texttt{run(\`{}linux shell command\`{})}
 	 \end{itemize}
 
-	 \part Now print your file to the console by typing \texttt{cat nflstats.json} (or whatever you choose to name the file) within the system call.
+	 \part Now print your file to the console by typing \texttt{cat dates.json} (or whatever you choose to name the file) within the system call.
 
 	 \part This file is ugly, so let's make it a little easier to deal with by converting it to a data frame. 
 
 	 \begin{itemize}	 
-		 \item If you use R, you will need to call the library \texttt{jsonlite}. You may need to install it first. The code to convert to a dataframe is \texttt{mydf <- fromJSON('nflstats.json')}. (Make sure you call the file by whatever you called it in part (b).)
+         \item If you use R, you will need to call the libraries \texttt{jsonlite} and \texttt{tidyverse}. You may need to install them first. The code to convert to a dataframe requires two steps. First, convert the JSON to a list: \texttt{mylist <- fromJSON('dates.json')}. (Make sure you call the file by whatever you called it in part (b).) Second, convert the list to a data frame (and remove the first element, since in this case it is not useful): \texttt{mydf <- bind\_rows(mylist\$result[-1])}
 	 \end{itemize}	 
 
-	 \part Check what type of object \texttt{mydf} is. What type of an object is \texttt{mydf\$players}?
+     \part Check what type of object \texttt{mydf} is. What type of an object is \texttt{mydf\$date}?
 
 	 \begin{itemize}	 
 		 \item In R, this is done with \texttt{class()}.
@@ -148,41 +150,47 @@ Type \texttt{sparkR} at the command line and you should be able to use Spark's R
 		 \item In Julia, this is \texttt{typeof()}.
 	 \end{itemize}	 
 
-	 \part List the first $n$ rows of the players dataframe.
+     \part List the first $n$ rows of the \texttt{mydf} dataframe.
 
 	 \part Put all of these commands into an R, Python, or Julia script and then run it from your \texttt{PS4/} directory using \texttt{Rbatch}, \texttt{Pythonbatch}, or \texttt{juliabatch}. Remember the correct syntax which is listed in Question 3 of this homework.
 \end{parts}
 
 What I wanted you to take away from this exercise is that there is no one-to-one mapping from JSON/YAML files to tabular data. So creating a tabular data frame from a JSON requires a little extra work. The same holds true for other data types like XML and HTML (though these may be closer to a one-to-one tabular representation).
 
-Also, note that the \texttt{fromJSON} and other functions can accetp a URL as an argument. I had you use the shell just so you can get comfortable with accessing the shell from within R/Julia/Python.
+Also, note that the \texttt{fromJSON} and other functions can accept a URL as an argument. I had you use the shell just so you can get comfortable with accessing the shell from within R/Julia/Python.
 
-\subsubsection*{Practice with SparkR (R exercise part 2)}
+\subsubsection*{Practice with sparklyr (R exercise part 2)}
 
-\question This exercise will familiarize yourself with SparkR and how it is similar to or different from regular R. Please do the following. While you're entering these commands at the interactive SparkR prompt, you should also be creating an R script called \texttt{PS4b\_LastName.R} which contains all of these commands (so that you could easily reproduce your work whenever called upon).
+\question This exercise will familiarize yourself with \texttt{sparklyr} which is how one can use Spark through R. The walkthrough that I am giving you can also be found at \url{https://spark.rstudio.com/}. Please create an R script called \texttt{PS4b\_LastName.R} which contains all of your \texttt{sparklyr} commands (so that you could easily reproduce your work whenever called upon).
 
 \begin{enumerate}
-    \item Open a SparkR session on OSCER by typing \texttt{sparkR} at the command prompt.
-    \item Create a dataframe called \texttt{df1} that loads in the \texttt{iris} data.\footnote{Hint: use the command \texttt{as.data.frame()}.}
-    \item Now create a SparkDataFrame called \texttt{df} which loads in the \texttt{iris} data. The command for this is \texttt{createDataFrame}.
+    \item Open an R session on OSCER by typing \texttt{R} at the command prompt.
+    \item Make sure you have installed the \texttt{sparklyr} and \texttt{tidyverse} packages.
+    \item Load \texttt{sparklyr} and \texttt{tidyverse} packages. 
+    \item Set up a connection to Spark by issuing the following commands:
+    \begin{itemize}
+        \item[] \texttt{spark\_install(version = "3.0.0")}
+        \item[] \texttt{sc <- spark\_connect(master = "local")}
+    \end{itemize}
+    \item Create a tibble called \texttt{df1} that loads in the \texttt{iris} data.\footnote{Hint: use the command \texttt{as\_tibble()}.}
+    \item Now copy this tibble into Spark, calling it \texttt{df}. The command for this is \texttt{df  <- copy\_to(sc, df1)}.
     \item Verify that the two dataframe are different types: type \texttt{class(df1)} and \texttt{class(df)}. What is the class of each?
+    \item Are the column names any different across the two objects? If so, why might that be?
     \item Next, we will apply the common RDD/SQL operation: \texttt{select}
     \begin{enumerate}
-    \item List the first 6 rows of the \texttt{Sepal\_Length} and \texttt{Species} columns of \texttt{df}. This can be done by typing \texttt{head(select(df, df\$Sepal\_Length, df\$Species))}.
-    \item If you try the previous command on \texttt{df1}, what happens? Why do you think that happened?
+        \item List the first 6 rows of the \texttt{Sepal\_Length} and \texttt{Species} columns of \texttt{df}. This can be done by typing \texttt{df  \%>\% select(Sepal\_Length,Species) \%>\% head \%>\% print}.
     \end{enumerate}
     \item Now let's do another common RDD operation: \texttt{filter} 
     \begin{enumerate}
-    \item List the first 6 rows of all columns of \texttt{df} where \texttt{Sepal\_Length} is larger than 5.5. This can be done by typing \texttt{head(filter(df, df\$Sepal\_Length>5.5))}.
-    \item If you again try the previous command on \texttt{df1}, what happens? Why do you think that happened?
+         \item List the first 6 rows of all columns of \texttt{df} where \texttt{Sepal\_Length} is larger than 5.5. This can be done by typing \texttt{df  \%>\% filter(Sepal\_Length>5.5) \%>\% head \%>\% print}.
     \end{enumerate}
-    \item Combine the two previous exercises into one line (that is, nest the \texttt{select} and \texttt{filter} operations into one line.
-    \item Another useful RDD operation is ``group\_by'' which in SparkR is called \texttt{groupBy}. We can compute the average sepal length, as well as the number of observations, by each of the three iris species: \texttt{head(summarize(groupBy(df, df\$Species), mean=mean(df\$Sepal\_Length), count=n(df\$Sepal\_Length)))}.
-    %\item Finally, a common RDD operation is to sort. We can sort (\texttt{arrange()}) the above ``grouped by'' RDD by any of the three variables it contains.
-    %\begin{enumerate}
-    %\item Re-execute the previous call, this time assigning \texttt{df2} to the output.
-    %\item Now use the \texttt{arrange()} function to sort the result ascending by species name: \texttt{head(arrange(df2, asc(df2\$Species)))}
-    %\end{enumerate}
+    \item Combine the two previous exercises into one line (that is, put both the \texttt{select} and \texttt{filter} operations into one line using the \texttt{dplyr} pipeline.
+    \item Another useful RDD operation is ``group\_by.'' We can compute the average sepal length, as well as the number of observations, by each of the three iris species: \texttt{df2 <- df \%>\% group\_by(Species) \%>\% summarize(mean  = mean(Sepal\_Length), count = n()) \%>\% head \%>\% print}.
+    \item Finally, a common RDD operation is to sort. We can sort (\texttt{arrange()}) the above ``grouped by'' RDD by any of the three variables it contains.
+    \begin{enumerate}
+        \item Re-execute the previous call, this time assigning \texttt{df2} to the output.
+        \item Now use the \texttt{arrange()} function to sort the result ascending by species name: \texttt{df2 \%>\% arrange(Species) \%>\% head \%>\% print}
+    \end{enumerate}
 \end{enumerate}
 
 \question Go to \url{www.overleaf.com} and create another .tex document, this time naming it \texttt{PS4\_LastName.tex}. In it, tell me about some data sources that you would be interested in scraping from. These could be, for example: classical texts from Project Gutenberg, tweets that include a particular hashtag, college or professional sports statistics, financial market data, etc. For anything you are interested in, there is almost surely data that is freely available on the internet, and most data sources come with highly accessible APIs for R or Python.
