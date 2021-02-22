@@ -1,8 +1,8 @@
 ---
-title: "Reference Material"
+title: "Lecture 10"
 subtitle: "Intro and Tips for Julia"
 author: Tyler Ransom
-date: ECON 6343, University of Oklahoma
+date: ECON 5253, University of Oklahoma
 output:
   xaringan::moon_reader:
     css: ['default', 'metropolis', 'metropolis-fonts', 'ou-colors.css']
