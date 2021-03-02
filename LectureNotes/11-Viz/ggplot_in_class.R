@@ -1,5 +1,6 @@
 library(tidyverse)
 library(ggthemes)
+library(hexbin)
 
 # Example: mpg dataset (city and highway fuel economy for various makes/models/years of automobiles)
 
@@ -11,6 +12,9 @@ ggplot(data = mpg, aes(x = cty, y = hwy)) + geom_point()
 ggplot(data = mpg, aes(x = cty, y = hwy)) + geom_jitter()
 ggplot(data = mpg, aes(x = cty, y = hwy)) + geom_jitter() + theme_bw() # if you don't want a gray theme
 ggplot(data = mpg, aes(x = cty, y = hwy)) + geom_jitter() + theme_minimal()
+
+# save
+ggsave("badgraph.png")
 
 # Visualizing additional dimensions through size of dots, colors of dots, labels
 ggplot(data = mpg, aes(x = cty, y = hwy, size=as.factor(manufacturer))) + geom_jitter() + theme_minimal()
