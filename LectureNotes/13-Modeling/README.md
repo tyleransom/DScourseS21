@@ -1,203 +1,317 @@
-# Intro to statistical modeling
-These notes will show an overview of statistical modeling. We will cover how to model outcomes of various varieties and briefly discuss the pros and cons of various modeling approaches. 
+# Getting to know your data: Cleaning and Exploration
+These notes will show an overview of the process by which you can prepare your data for further analysis, as well as how you can further get to know your data. Some steps of this process are not fun at all, but they are an important part of the data science pipeline.
 
-## Fundamentals of modeling
-So, you have some data. Now you need to write down a model of how the variables in the data interact with each other.
+## Data Cleaning
+**Data Cleaning:** the process by which you "tame" your "wild" data. This is an important step of the process because it is at this step where *measurement* is determined. (e.g. "how many cigarettes per day do I define to be 'smoking'?")
 
-* Why do I need a model?
+You may do the following steps during the data cleaning process:
 
-    - because you're interested in either predicting some outcome variable (like sales)
+* **Convert** file format 
+    * e.g. JSON to CSV
+* **Rectangularize** your data
+    * e.g. store in data frame (or other useful container)
+* **Clean up string** variables
+    * e.g. remove "stop words" like "the," remove punctuation, keep only word stems
+* Convert **format** of variables for downstream use
+    * e.g. convert dates to specific format
+* **Normalize** values of numerical data
+    * e.g. standard deviation units
+* **Impute** missing values
+* **Merge** with other existing data sources
+* **Remove** outlier observations
+    * e.g. by top- or bottom-coding aka *winsorizing*
+* **Fix typos** in numeric variables
+    * e.g. `5.25` instead of `525`
+* **Browse** the data
 
-    - or because you're interested in understanding a causal relationship (e.g. between advertising and sales)
+## Data Exploration
+**Data Exploration:** the process by which you more fully inspect your data. Data cleaning and data exploration constitute an interative process. (Yet another reason to make sure you write code that is reproducible!)
+
+Data exploration includes the following steps:
+
+* Computing **descriptive statistics**
+    * e.g. mean, variance, min, max, median, etc.
+* Creating **frequency tables**
+    * e.g. to tell if a variable is continuous or discrete
+* Creating **transformations** of existing variables
+    * e.g. `x^2`, `ln(x)`, etc.
+* Creating **new variables** from combinations of existing variables
+    * e.g. `x*z`, `x*w*z`, etc.
+    * This is also called "feature engineering"
+* **Visualizing** your data
+    * e.g. charts, graphs, scatter plots, etc.
+* Running **preliminary models**
+    * e.g. pairwise correlations, regressions, etc.
+* **Selecting subsamples**
+    * e.g. throw out baby boomers because millenials are the population of interest
+
+## Questions you should ask yourself
+Throughout the process of data cleaning/exploration, you should constantly be asking yourself the following questions:
+
+* What is my unit of analysis?
+* How am I measuring the phenomena I am attempting to research?
+* Do the variables mean what I think they should mean?
+* Does my data set have the expected number of observations?
+* What fraction of values are missing in my data? Is this what I would have expected?
+* Are variables named in such a way that if I were to give this data set to someone else, they would understand the contents of the data?
+* Are the variables I am interested in continuous or discrete?
+* Does anything about my data look *funny*?
+
+## Normalization of (continuous) numerical data
+Often, it will be useful to normalize your data in specific ways. Why is it advantaeous to normalize numerical data?
+
+1. It often greatly enhances numerical performance
+2. It can help you interpret your model's results down the line (i.e. "A one-unit increase in X corresponds to a one-standard-deviation increase in Y")
+
+### Z-score
+
+This is done by computing `z = (x-mu)/sigma` where `mu` is the sample average and `sigma` is the sample standard deviation. The resulting variable takes on values typically between -5 and +5, and each unit is interpreted as one standard deviation.
+
+**example** In education data, student test scores are often expressed in z-score units to facilitate "apples to apples" comparisons
+
+In data science applications, many ML algorithms require z-scored data to appropriately run. This is because unscaled data can sometimes cause numerical issues. Some ML packages will do this z-scoring for the user as part of the algorithm.
+
+### max-min normalization
+This is done by normalizing the variable relative to its max and min. The transformed variable takes on values in [0,1]:
+
+`z = (x-min(x))/(max(x)-min(x))`
+
+The issue with this method is that if your data set has crazy outliers, 95% of the data will be clustered at 0.5 in the normalized variable.
+
+### Sigmoidal normalization
+This is another way to transform a variable to fall in the (0,1) interval. This method is immune to outliers:
+
+`z = exp(x)/(1+exp(x))`
+
+or equivalently
+
+`z = 1/(1+exp(-x))` 
+
+It's called *sigmoidal* because the function `f(x) = 1/(1+exp(-x))` is known as the sigmoid (or logistic) function. 
+
+### Hyperbolic tangent normalization
+If one wanted to normalize a variable to fall in the interval (-k,k), one can use the hyperbolic tangent function:
+
+`z = k*tanh(x)`
+
+This is a lot like the sigmoid function, only it goes from (-k,k) instead of (0,1).
+
+## Discretization
+Sometimes, it's useful to convert a continuous variable into a discrete one. This can be done in a myriad of ways. (We won't cover these in detail, but think of how a histogram is built.)
+
+## Other transformations
+It may also help to transform variables to fit your specific needs. One common transformation is the `log` transformation:
+
+`z = ln(x)`
+
+If you are examining earnings, sales, or some other nominal currency quantity, these distributions often are approximately log-normal. If you take the log of a log-normal distribution, you get back a normal distribution, which is very convenient to work with.
+
+In general, you should think "log-normal" if you see a variable that is:
+
+1. continuous
+2. always positive
+3. has a lot of observations clustered around a small(ish) value
+4. has a really, really long tail
+
+## Imputation
+So you've got some missing values in your data. What can you do to fix them?
+
+* Listwise deletion
+* Mean (or mode) substitution
+* Regression (or k-nearest neighbors) matching
+* Multiple imputation
+* Bayesian methods
+* Create a binary variable indicating missingness and use it as a control in downstream models
+* Interpolate missing values (very useful for panel data!)
+
+### Why are the values missing?
+The key to choosing an imputation scheme is knowing why the values are missing in the first place. Are they missing e.g. because users randomly had a glitch that kicked them off the website? Or are they missing because some users didn't feel like clicking "purchase" and instead logged off, leaving the product in their cart?
+
+There are three types of "missingness":
+
+1. **Missing Completely At Random (MCAR)**: values are missing for completely random reasons. i.e. a weighted coin was flipped which determined whether the value made it into our data set
+    * Think of this like a randomized experiment
+2. **Missing At Random (MAR)**: values are not missing at random, but we can account for their missingness by using variables for which we have information
+    * like a regression model which satisfies the unconfoundedness assumption
+3. **Missing Not At Random (MNAR)**: values are missing for reasons that are not random, and which cannot fully be accounted for by other variables for which we have information
+    * like an endogenous choice which is made based on utility maximization
+    * **sample selection bias**
+    * canonical example: only observe wages for people who are employed; employment is not randomly assigned 
+    * newer example: only observe tweets of twitter users; twitter accounts (and usage) not randomly assigned
+
+### Listwise deletion
+If the values are **missing completely at random (MCAR)** then we can simply drop the entire offending row and our final results will not be biased.
+
+The downside is that we will lose statistical power (because we will have fewer observations)
+
+Also, if lots of variables are MCAR in different ways, this can drastically reduce the number of observations.
+
+### Mean (or mode) substitution
+Another way to impute missing values is to fill in missings with the mean (if variable is continuous) or the mode (if variable is discrete).
+
+This is not a great way to fix the problem. On the one hand, the average (mode) is unchanged. On the other hand, the variance is severely deflated.
+
+### Matching
+One can also impute by picking another observation for which the value is not missing, and which all other variables are as similar as possible.
+
+Essentially, we find a "donor" for the observation that is missing, and say "If the observations look similar enough, we can plug in the donor's non-missing value."
+
+We can use a number of ways to find the donor: OLS, k-nearest neighbors, random forest, etc.
+
+This method works great if values are MAR.
+
+It is important to keep in mind that these model-based imputation methods may understate the true variance of the distribution, so it is sometimes helpful to inject noise into the imputed values.
+
+### Multiple imputation
+Multiple imputation is a multi-step process:
+
+1. Impute values M different times (via any of the above methods)
+2. With M different data sets, conduct your analysis on each data set
+3. Consolidate analyses (e.g. by averaging)
+
+Example: `MICE` (Mulitple Imputation by Chained Equations)
+
+At the end of the day, most multiple imputation methods are variations on "matching" which requires MAR.
+
+### Bayesian methods
+Another way to impute is to use Bayesian methods. The R package `MixedDataImpute` uses a state-of-the-art statistical model to impute missing values. Its performance exceeds that of MICE and other multiple imputation methods.
+
+### Create binary variable for missing values
+My preferred way to impute is to create a new variable that is `1` when the values of `x` are missing, and `0` otherwise.To create this, I follow these two steps:
+
+1. Create the variable (e.g. `m_x`) equal to 1 if `x` is missing, 0 otherwise.
+2. Recode the missing values of `x` to be some constant value outside the support (e.g. 50)
+
+The key thing to remeber is that `x` now has a mass point at 50, so when computing summary statistics, you should exclude these observations.
+
+The nice thing about this is that you can, for example, run a regression and include `m_x` as a control variable, and it will estimate a separate effect for `x` for the group of values that are missing.
+
+### Interpolation
+If one has repeated observations of the same unit, one can fill in the values by interpolating.
+
+Example from my research:
+
+* follow individuals over extended period of time
+* in some years (e.g. 2010), individuals don't report their earnings
+* but I can see that they are working at the same job in 2009 and 2011, and I see their earnings in those years
+* I can **interpolate** their 2010 earnings by taking the average of the 2009 and 2011 earnings
+
+**Note:** Interpolation requires having valid values on each boundary point. If you don't have this, then it's called *extrapolation* and it's much more prone to error.
+
+In my example above, if I observed earnings in 2009 and 2010, but not 2011, I would not be comfortable setting 2011 earnings to be the average of 2009 and 2010 because the individual may have gotten a promotion, etc.
+
+## Data exploration: descriptive statistics
+Descriptive statistics (mean, median, variance, min, max) may seem "boring" but they are the easiest way for you to summarize your data.
+
+It's often helpful to generate a summary table that lists the descriptive statistics for each of the variables you are studying (either outcomes or controls). For example:
+
+| Variable   | Obs.    | Mean      | Std. Dev. |  Median    | Min       | Max        |
+|------------|---------|-----------|-----------|------------|-----------|------------|
+| Sales      |  15,147 | 13,456.50 | 16,579.81 |  10,500.00 |    501.00 | 165,789.00 |
+| Morning    | 363,528 |      0.24 |      0.43 |       0.00 |      0.00 |       1.00 |
+| Afternoon  | 363,528 |      0.36 |      0.48 |       0.00 |      0.00 |       1.00 |
+| Evening    | 363,528 |      0.35 |      0.48 |       0.00 |      0.00 |       1.00 |
+| Night      | 363,528 |      0.05 |      0.22 |       0.00 |      0.00 |       1.00 |
+| Income     | 363,528 | 96,501.73 | 87,389.19 |  82,000.00 | 23,000.00 | 425,000.00 |
+| Age        | 363,528 |     55.87 |     12.77 |      52.00 |     14.00 |      96.00 |
+| Female     | 363,528 |      0.42 |      0.49 |       0.00 |      0.00 |       1.00 |
+
+Anything wrong with this table? Anything that jumps out at you?
+
+## Data exploration: frequency tables
+It's often helpful to compute frequency tables of each of your variables that are discrete (categorical).
+
+This will help you visualize the distribution of these variables. For example:
+
+* Is the distribution of this three-category variable roughly uniform?
+* Or are 95% of the values in one of the three categories?
+
+## Data exploration: preliminary models
+It often helps to run preliminary statistical models to see how your variables covary, how sensitive raw correlations are to inclusion of additional predictors, etc.
+
+* pairwise correlations (including rank correlations)
+* concordance indices (e.g. Jaccard similarity)
+* OLS
+* Logit, Probit, etc.
+
+We'll talk more about these next week
+
+## Data visualization
+Commonly used data visualization types that are useful in getting to know your data:
+
+* box-and-whisker plot
+* scatter plot
+* histogram
+* kernel density plot
+* [binned scatter plots](https://michaelstepner.com/binscatter/binscatter-StataConference2014.pdf) (aka "binscatter")
+* line charts
+* maps
+* summary tables (tables are a visualization tool!)
+* word clouds (for textual data)
+* many others
+
+## When to use various visuals?
+Different visualization tools can be used for different tasks:
+
+* Find outliers
+* Examine distribution of values 
+    - box-and-whisker, histogram, kernel density
+* Report correlations
+    - scatter plot or binscatter (for two continuous variables)
+    - plots by "facet" (for one continuous variable and one categorical variable)
+* Examine trends in time series data
+    - line charts
+* Text trends
+    - word clouds
+    - word trees
+
+## Coding visuals in R: `ggplot2`
+See [here](http://r4ds.had.co.nz/data-visualisation.html) for a step-by-step guide on the basics of creating data visuals in R using `ggplot2`.
+
+R package for binscatters: [binscattr](https://github.com/paulgp/binscattr) (still in its infancy)
+
+## Directory of visualization types (from Duke library)
+[This website](https://guides.library.duke.edu/datavis/vis_types) has a nice summary of types of visuals that may be helpful in telling your story.
+
+## The OG data visualization
+
+<img width="450" src="http://geoawesomeness.com/wp-content/uploads/2013/03/John-Snows-cholera-map.jpg" alt="Cholera Map">
+
+## Beautiful visualization
+
+<img width="450" src="https://bs.phncdn.com/insights-static//wp-content/uploads/2018/01/pornhub-insights-hawaii-missile-alert-traffic.png" alt="Hawaii missile">
 
 
-### The types of variables in a model
+More beautiful visualizations available at [r/dataisbeautiful](https://www.reddit.com/r/dataisbeautiful/)
 
-1. Outcome variable (typically denoted **y**), aka:
-    * response variable
-    * dependent variable
-    * target variable
-2. Covariates (typically denoted **x**), aka:
-    * predictors
-    * features
-    * independent variables
-    * control variables
-3. Parameters (typically denoted **&beta;** or **&theta;**):
-    * map covariates into outcomes
-4. Error term (typically denoted **&epsilon;**), aka:
-    * unobservables
-    * distrubance term
+Comical opponent: [r/dataisugly](https://www.reddit.com/r/dataisugly/)
 
-### What is a model?
+* You don't want to end up on that site
 
-A **model** is a mapping between covariates, parameters, unobservables, and outcomes. It is the "production function" that generates the outcome we are interested in.
+## Be careful how you visualize!
 
-Most generally, the model is:
-
-y = f(x,&theta;,&epsilon;)
-
-The model can be as simple as
-
-y = &beta;<sub>0</sub> + &beta;<sub>1</sub>x<sub>1</sub> + &beta;<sub>2</sub>x<sub>2</sub> + &epsilon;
-
-or it can be as complex as
-
-y = &beta;<sub>0</sub>x<sub>1</sub><sup>(&beta;<sub>1</sub>)<sup>&beta;<sub>2</sub>x<sub>2</sub></sup></sup>e<sup>&epsilon;</sup>
-
-A model can even have a &theta; that is *infinite-dimensional*. We call this a **non-parametric** model. (Equivalently, a non-parametric model is one in which we do not make any assumption about the distribution from which &epsilon; is drawn.)
-
-## The types of variables
-Variables can be: 
-
-* continuous
-* binary
-* categorical (ordered)
-* categorical (unordered)
-* integers (i.e. counts)
-
-Note that both dependent and independent variables can be of these types
-
-## Modeling dependent variables
-For each type of dependent variable, we can come up with a statistical model to describe the relationship between the dependent variable and the covariates and unobservables.
-
-All models fall under two umbrellas:
-
-1. Parametric
-2. Nonparametric
- 
- 
-* The advantage of a parametric model is that one can interpret the model by looking at the parameters. The disadvantage is that it may not always be flexible enough to fit the data perfectly.
-
-* The advantage of a nonparametric model is that it typically fits the data better. The disadvantage is that it may not be readily interpretable.
-
-## Continuous dependent variables
-A variable is **continuous** if it takes on any real number over some range (typically the entire real number line or the positive real numbers)
-
-**Examples:** sales, earnings, number of page clicks, etc.
-
-The table below lists examples of parametric and nonparametric models appropriate for dependent variables that are continuous.
-
-| Parametric | Nonparametric |
-|------------|---------------|
-| OLS        | regression tree (forest, etc.) |
-| Quantile regression | support vector machine (including k-nearest neighbor) |
-| naive Bayes regression | Artificial Neural Network (ANN) |
-|            | genetic programming (GP) |
-|            | ... |
-
-## Binary dependent variables
-A variable is **binary** if it only takes on two values (without loss of generality: 0 or 1)
-
-**Examples:** product was purchased by customer (or not), individual has cancer (or not), loan is in default (or not)
+<img width="450" src="https://imgs.xkcd.com/comics/heatmap.png" alt="XKCD heat map">
 
 
-| Parametric | Nonparametric |
-|------------|---------------|
-| Logistic regression | classification tree (forest, etc.) |
-| Probit regression | support vector classifier |
-| naive Bayes classification | Artificial Neural Network (ANN) |
-|            | genetic programming (GP) |
-|            | ... |
+Always make sure that your image conveys useful information
 
-## Ordered categorical dependent variables (aka Ordinal variables)
-A variable is **ordered categorical** if it takes on a finite (typically small) set of values (without loss of generality: 0, 1, ..., K) and where *order matters* (i.e. K > K-1 > K-2 > ... > 1 > 0). Values are mutually exclusive, so that each observation in the data belongs to one and only one category.
+## Jupyter notebooks (in Python) created by Jason DeBacker (U of South Carolina)
 
-**Example 1:** consumer has "interest" in a product by either: (0) not clicking on it; (1) clicking on it but not adding it to the cart; (2) adding it to the cart but not purchasing it; (3) purchasing it once; or (4) purchasing it multiple times
-
-**Example 2:** a loan is either: (0) neither in default nor foreclosure; (1) in default but not in foreclosure; or (2) in foreclosure
-
-| Parametric | Nonparametric |
-|------------|---------------|
-| Ordered logistic regression | ordinal trees |
-| Ordered probit regression |support vector ordinal regression |
-|            | ANN |
-|            | GP |
-|            | ... |
+* [Static Visualizations](https://github.com/jdebacker/CompEcon_Fall17/blob/master/Visualization/StaticVisualization.ipynb)
+* [Dynamic Visualizations](https://github.com/jdebacker/CompEcon_Fall17/blob/master/Visualization/DynamicVisualization.ipynb)
 
 
-## Unordered categorical dependent variables
-A variable is **unordered categorical** if it takes on a finite (typically small) set of values (without loss of generality: 0, 1, ..., K) but where *there is no inherent ordering among the categories*. Values are mutually exclusive, so that each observation in the data belongs to one and only one category.
+## Economic mobility data used by DeBacker
+This module of the course covers data visualization tools.  We'll learn these tools by studying economic mobility using data from the [Equality of Opportunity Project](http://www.equality-of-opportunity.org).
 
-**Example 1:** consumer can purchase: (0) no handbags; (1) Louis Vuitton handbags; (2) Coach handbags; (3) Other designer handbags; or (4) non-designer ("generic") handbags
-
-**Example 2:** a person can choose to live in either: (0) Oklahoma City metro area; (1) Tulsa metro area; or (2) somewhere else in Oklahoma
-
-The algorithms here are exactly the same as for binary dependent variables, except that now there are multiple categories.
-
-
-| Parametric | Nonparametric |
-|------------|---------------|
-| Multinomial logistic regression | classification tree (forest, etc.) |
-| Multinomial probit regression | support vector classifier |
-| naive Bayes classification | Artificial Neural Network (ANN) |
-|            | genetic programming (GP) |
-|            | ... |
-
-
-## Integer-valued dependent variables
-A variable is **integer-valued** if it takes on values in the set of integers (0, 1, 2, ..., &infin;). Sometimes data that has this property is referred to as **count data**.
-
-**Example 1:** consumer can smoke 0, 1, or more cigarettes in a day.
-
-**Example 2:** a soccer team can score 0, 1, ..., 8 goals in a game.
-
-**Example 3:** a city can experience 0, 1, or more vehicle accidents in a day.
-
-Depending on the setting, some researchers will simply assume log-normality of the dependent variable in this case. Again, a choice like this really depends on the exact case.
-
-The parametric algorithms for modeling count data are a bit different from before, but the nonparametric algorithms are quite similar:
-
-
-| Parametric | Nonparametric |
-|------------|---------------|
-| Poisson regression | regression tree (forest, etc.) |
-| Negative binomial regression | support vector machine |
-| zero-inflated count models | Artificial Neural Network (ANN) |
-| zero-truncated count models | genetic programming (GP) |
-|            | ... |
-
-
-## Independent variables
-As mentioned previously, we can have all kinds of independent variables. Some helpful things to know about independent variables:
-
-* don't treat an ordered categorical variable as a continuous variable
-* use "one-hot" encoding of categorical variables (equivalently `as.factor()` in R)
-* if using a liner regression model, it is sometimes helpful to create polynomial functions of continuous covariates
-* interacting two binary covariates (or a binary and a continuous covariate) can also be helpful
-
-** How you specify your right hand side variables depends a lot on the goal of your model (i.e. prediction vs. causality)**
-
-## Observational vs. Experimental data
-**Observational data** is data that has been collected for no particular purpose.
-- e.g. Census household survey data, twitter stream, Dow Jones stock prices, etc.
-
-**Experimental data** is data that scientists have set up where certain units are randomly assigned to take on certain values of a variable of interest (the **treatment variable**)
-
-**Causal inference** (as opposed to prediction) is the idea that we can figure out if **x** causes **y** by comparing units that were treated with those that were not treated. 
-
-Causal inference requires knowing the "counterfactual": "What would have happened to units in the control group if they had been treated?"
-
-## Estimating statistical models in R, Python, and Julia
-
-Libraries and functions (`library::function`)
-
-| Algorithm | R | Python | Julia | 
-|----------|----|--------|-------|
-| OLS                        | `base::lm` | `statsmodels::OLS` | `GLM::glm` |
-| trees                      | `rpart::rpart` | `sklearn::tree` | `DecisionTree::build_tree` |
-| k-nearest neighbor         | `caret::knn3`  | `sklearn::KNeighborsClassifier` |  `NearestNeighbors::knn`     |
-| SVM                        | `e1071::svm`  | `sklearn::svm` |  `LIBSVM::svmtrain`     |
-| naive Bayes                | `e1071::naiveBayes`   | `sklearn::GaussianNB` | `NaiveBayes::HybridNB` |
-| ANN                        | `nnet::nnet` | `sklearn::neural_network` | `Knet::train` |
-| genetic prog.              | `rgp::geneticProgramming` | `gplearn::est_gp.fit` | `GeneticAlgorithms::runga` |
-| logistic/probit regression | `base::glm`   | `sklearn::linear_model.LogisticRegression` | `GLM::glm` |
-| ordered logit/probit       | `MASS:polr` | `mord::LogisticIT` | `LowRankModels::OrderedMultinomialLoss` |
-| multionmial logit/probit   | `nnet::multinom` | same as logistic | `SciKitLearn::LogisticRegression` |
-| Poisson regression         | `base::glm` | `statsmodels::GLM` | `GLM::glm` |
-
+[Where is the Land of Opportunity? The Geography of Intergenerational Mobility in the United States](https://eml.berkeley.edu/~saez/chetty-friedman-kline-saezQJE14mobility.pdf)
 
 ## Useful Links
 
-* [Multiclass classification](https://en.wikipedia.org/wiki/Multiclass_classification)
-* [One-hot encoding](https://en.wikipedia.org/wiki/One-hot)
-* [Genetic programming example in R](https://www.kaggle.com/olegtereshkin/genetic-programming-r-example/code)
+* [Matplotlib guide](http://pbpython.com/effective-matplotlib.html)
+* [Overview of Python visualization tools](http://pbpython.com/visualization-tools-1.html)
+* [A Dramatic Tour Through Python's Data Visualization Landscape](https://dsaber.com/2016/10/02/a-dramatic-tour-through-pythons-data-visualization-landscape-including-ggplot-and-altair/)
+* [A Detailed Matplotlib Example](https://www.dataquest.io/blog/making-538-plots/)
+* [Matplotlib Gallery](https://matplotlib.org/gallery.html)
+* [Seaborn Gallery](https://seaborn.pydata.org/examples/index.html)
+* [Bokeh Gallery](https://bokeh.pydata.org/en/latest/docs/gallery.html)
