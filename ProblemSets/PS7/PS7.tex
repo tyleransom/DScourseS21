@@ -118,11 +118,11 @@ Our coefficient of interest is $\beta_{1}$ which can be interpreted as the retur
     \item estimate the regression using only complete cases (i.e. do listwise deletion on the log wage variable ... this assumes log wages are Missing Completely At Random)
     \item perform mean imputation to fill in missing log wages
     \item impute missing log wages as their predicted values from the complete cases regression above (i.e. this would be consistent with the ``Missing at Random'' assumption)
-    \item use the \texttt{mice} package to perform a multiple imputation regression model (follow the steps \href{https://rpubs.com/mhanauer/mice}{here})
+    \item use the \texttt{mice} package to perform a multiple imputation regression model (follow the steps \href{https://vincentarelbundock.github.io/modelsummary/articles/multiple_imputation.html}{here})
     %\item use the \texttt{MixedDataImpute} package to impute missing log wages
 \end{itemize}
 
-Once you have finished all of this, use \texttt{modelsummary} to create one regression table which has the estimates of the first three regression models. (\texttt{mice} may not produce output that is compatible with \texttt{modelsummary}.) Include this table in your .tex writeup. 
+Once you have finished all of this, use \texttt{modelsummary} to create one regression table which has the estimates of the four regression models. Include this table in your .tex writeup. 
 
 The true value of $\hat{\beta}_{1}=0.093$. Comment on the differences of $\hat{\beta}_{1}$ across the models. What patterns do you see? What can you conclude about the veracity of the various imputation methods? Also discuss what the estimates of $\hat{\beta}_{1}$ are for the last two methods.
 
