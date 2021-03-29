@@ -1,0 +1,213 @@
+---
+title: "Lecture 18"
+subtitle: "Simulation and Debugging Strategies"
+author: Tyler Ransom
+date: ECON 5253, University of Oklahoma
+output:
+  xaringan::moon_reader:
+    includes:
+        in_header: "18slides_files/mathjax-equation-numbers.html"
+    css: ['default', 'metropolis', 'metropolis-fonts', 'byu-colors.css']
+    # self_contained: true
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: '16:9'
+
+---
+
+```{r, load_refs, include=FALSE, cache=FALSE}
+library(RefManageR)
+library(tidyverse)
+BibOptions(check.entries = FALSE,
+           bib.style = "authoryear",
+           style = "markdown",
+           hyperlink = FALSE,
+           dashed = TRUE)
+#biblio <- ReadBib("../../References/References.bib", check = FALSE)
+```
+
+# Plan for the day
+
+- Talk about simulation as a potentially useful tool in a data scientist's belt
+
+- Discuss how simulation can be helpful for debugging purposes
+
+---
+# What is simulation?
+Simulation can mean a lot of different things, depending on the discipline
+
+1. As it relates to our previous discussions, .hi[simulation has a close relationship with optimization]. That is, some objective functions are better solved by simulation than by gradient descent or other optimization algorithms. (Note: we won't cover any of these in this class)
+
+2. .hi[Simulation can be a useful tool for debugging]. Suppose you have a statistical model, and you're not quite sure what the answer should be. You can generate fake data (in which you know all of the parameters of interest) and can use that fake data to make sure that you haven't made any mistakes. This is the context we will be discussing today.
+
+---
+# The Monte Carlo method
+"Monte Carlo methods (or Monte Carlo experiments) are a broad class of computational algorithms that rely on repeated random sampling to obtain numerical results." -- [Wikipedia](https://en.wikipedia.org/wiki/Monte_Carlo_method)
+
+.hi[Why is it called "Monte Carlo"?]
+
+* *Monte Carlo* is a phrase coined by John von Neumann while working on the Manhattan Project.
+    * (Monte Carlo is the name of the casino in Monaco where the uncle of von Neumann's co-worker, Stanisław Ulam, would borrow money to gamble)
+    * It was a code name for Ulam and von Neumann's early use of what we now call the Monte Carlo method
+
+---
+# Example
+What are the odds of being dealt a flush in 5-card poker? There are two avenues to computing this:
+
+1. Use combinatorics (i.e. combinations and permuations ... "n Choose r") to analytically solve for the probability
+2. Shuffle the deck and deal the cards 100,000 times and count the number of times a flush happens
+
+(2) is known as the "Monte Carlo method"
+
+---
+# Another Example
+
+- In sports: "If the Cavs and Warriors had played that game 10 times, the Warriors would have won 9 of them" 
+
+- This type of discussion implictly appeals to the Monte Carlo method (though 10 is almost never a reasonable sample size!)
+
+- Nowadays with computing getting cheaper and cheaper, it's often easier to solve problems via simulation than going through the analytical derivation
+
+---
+# The Data Scientist's Lab
+Monte Carlo (or, equivalently, Simulation) can be thought of as "the data scientist's lab" because it's a way to discover new methods and test the properties of existing methods
+
+How to do this? Let's go through a simple example
+
+---
+# Simulate the classical linear model
+What's the "Hello world" of optimization? The classical linear model!
+
+In math (matrix notation), this is
+
+\begin{align*}
+y = X\beta + \varepsilon
+\end{align*}
+
+In R code, this is
+
+```r
+y <- X%*%beta + epsilon
+```
+
+---
+# Steps to the simulation
+Here's what we need to do the simulation:
+
+0. Random number seed (to be able to replicate random draws)
+1. Sample size (`N`)
+2. Number of covariates (`K`)
+3. Covariate matrix (`X`), which is N by K
+4. Parameter vector (`beta`) which matches the size of `X`
+5. Distribution of $\varepsilon$, e.g. $N(0,\sigma^2)$
+
+---
+# Coding steps
+
+Steps to create the data:
+
+```r
+set.seed(100)
+N <- 100000
+K <- 10
+sigma <- 0.5
+
+X <- matrix(rnorm(N*K,mean=0,sd=sigma),N,K)
+X[,1] <- 1 # first column of X should be all ones
+eps <- rnorm(N,mean=0,sd=0.5)
+betaTrue <- as.vector(runif(K))
+Y <- X%*%betaTrue + eps
+```
+
+Now we have some fake data that follows our .hi[data generating process]
+
+---
+# Evaluating the simulation
+We can now evaluate our simulation by, e.g. running 
+
+```r
+estimates <- lm(Y~X -1)
+print(summary(estimates))
+```
+
+and we should get something very close to `betaTrue` as our estimates
+
+The estimates won't be exactly equal to `betaTrue` unless we have `N <- infinity`
+
+This is because of randomness in our $\varepsilon$ (i.e. sampling variation)
+
+---
+# Debugging
+
+What is debugging?
+
+It is the process by which you get "broken" code to work
+
+You "take the bugs out" of your code
+
+Obviously it's better to not write code that has bugs
+
+But this is impossible! Even the best coders in the world have to debug
+
+(Just like pro baseball players rarely get a hit more than 40% of the time)
+
+
+---
+# Types of errors
+
+There are two broad [classes of errors](https://textexpander.com/blog/the-7-most-common-types-of-errors-in-programming-and-how-to-avoid-them/) for R users
+
+1. .hi[Syntax errors]
+
+    - you've made a typo
+    
+    - e.g. misplaced parenthesis, misplaced comma, not enough inputs to function
+    
+2. .hi[Logic errors]
+
+    - your code is syntactically correct, but you've programmed the computer to do the wrong thing
+    
+    - e.g. conformability errors, trying to use OLS with a factor $y$ variable, etc.
+
+---
+# Common debugging strategies
+
+Suppose you get an error message. What do you do? Here's what I do.
+
+1. Read the error message carefully!
+
+2. Classify the message as a syntax error or a logic error
+
+3. If syntax, look up what went wrong (e.g. documentation or Google)
+
+4. If logic, try to figure out what went wrong
+
+
+---
+# "Got here"
+
+- A tried-and-true helpful strategy is to print "got here" periodically
+
+    - This can help you figure out where exactly the error might be
+
+- A related strategy is to stop the program and look at what the program is seeing
+
+    - I will often type `asdgwej` or similar to make the program stop, and then examine the environment
+    
+
+---
+# Modern debuggers
+
+- For debugging within functions, modern IDEs like RStudio often provide a debugger interface
+
+- Allows the user to set a "break point" (without throwing an error like `sadgwioeg` would)
+
+- User can then look at the environment within the function
+
+- Interactive debugging can sometimes be faster than "got here"
+
+- But "got here" often works quite well
+
+- [Full instructions](https://support.rstudio.com/hc/en-us/articles/205612627-Debugging-with-RStudio) for how to use RStudio's debugger
