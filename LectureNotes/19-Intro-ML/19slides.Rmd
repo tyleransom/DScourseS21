@@ -1,0 +1,381 @@
+---
+title: "Lecture 19"
+subtitle: "Introduction to Machine Learning"
+author: Tyler Ransom
+date: ECON 5253, University of Oklahoma
+output:
+  xaringan::moon_reader:
+    includes:
+        in_header: "19slides_files/mathjax-equation-numbers.html"
+    css: ['default', 'metropolis', 'metropolis-fonts', 'byu-colors.css']
+    # self_contained: true
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: '16:9'
+
+---
+
+```{r, load_refs, include=FALSE, cache=FALSE}
+library(RefManageR)
+library(tidyverse)
+BibOptions(check.entries = FALSE,
+           bib.style = "authoryear",
+           style = "markdown",
+           hyperlink = FALSE,
+           dashed = TRUE)
+#biblio <- ReadBib("../../References/References.bib", check = FALSE)
+#knitr::opts_chunk$set(fig.retina=1.8)
+```
+
+# Plan for the day
+
+- Machine learning vs. artificial intelligence
+
+- Machine learning vs. econometrics
+
+- Bias-variance tradeoff
+
+
+---
+# What is machine learning (ML)?
+
+.hi[ML:] Allowing computers to learn for themselves without being explicitly programmed
+
+* .hi[USPS:] Computers read handwritten addresses and sort mail accordingly
+* .hi[Google:] AlphaGo, AlphaZero (computers that are world-class chess, go players)
+* .hi[Apple/Amazon/Microsoft:] Siri, Alexa, Cortana voice assistants understand speech
+* .hi[Facebook:] automatically finds and tags faces in a photo
+
+In each of the above examples, the machine is "learning" to do something only humans had previously been able to do
+
+Put differently, the machine was not programmed to read numbers or recognize voices -- it was given a bunch of examples of numbers and human voices and came up with a way to predict what's a number or a voice and what isn't
+
+
+---
+# What is artificial intelligence (AI)?
+
+.hi[AI:] Constructing machines (robots, computers) to think and act like human beings
+
+Thus, machine learning is a (large) subset of AI
+
+
+---
+# Machine learning's role in data science
+
+* In data science, machine learning closely resembles statistics
+
+* Why? Because a lot of data science is about finding "insights" or "policies" in your data that can be used to increase profits or improve quality of life in some other dimension
+
+* Finding "insights" is about finding correlative and causal relationships among variables
+
+* Statistics is the science that has the vast majority of these tools
+
+
+---
+# Machine learning vs. econometrics
+
+* .hi[Machine Learning] is all about maximizing out-of-sample prediction
+
+* .hi[Econometrics] is all about understanding the causal relationship between a policy variable $x$ and an outcome $y$
+
+* .hi[Machine Learning] is all about finding $\hat{y}$
+
+* .hi[Econometrics] is all about finding $\hat{\beta}$
+
+
+---
+# The fundamental objective of Machine Learning
+The fundamental objective is to maximize out-of-sample fit
+
+* But how is this possible given that -- by definition -- we don't see what's not in our sample?
+
+* The solution is to choose functions that predict well in-sample, but penalize them from being too complex
+
+* .hi[Regularization] is the tool by which in-sample fit is penalized, i.e. regularization prevents overly complex functions from being chosen by the algorithm
+
+* .hi[Overfitting] is when we put too much emphasis on in-sample fit, leading us to make poor out-of-sample fit
+
+
+---
+# Elements of Machine Learning
+
+1. Loss function (this is how one measures how well a particular algorithm predicts in- or out-of-sample)
+2. Algorithm (a way to generate prediction rules in-sample that can generate to out-of-sample)
+3. Training data (the sample on which the algorithm estimates)
+4. Validation data (the sample on which algorithm tuning occurs)
+5. Test data (the "out-of-sample" data which is used to measure predictive power on unseen cases)
+
+The algorithm typically comes with .hi[tuning parameters] which are ways to regularize the in-sample fit
+
+.hi[Cross-validation] is how tuning parameters are chosen
+
+
+---
+# Example
+
+* Suppose you want to predict housing prices (this is the "hello world" of machine learning)
+
+* You have a large number of relevant variables
+
+* What would you do?
+
+    * You would want to have a model that can detect non-linear relationships (like the USPS handwriting reader)
+    
+    * You would also want to have a model that you can tractably estimate
+    
+    * And a model that will predict well out-of-sample
+
+
+---
+# Option 1: separate dummies for every house
+
+* In this scenario, you run `lm(log(price) ~ as.factor(houseID))`
+
+* What you get is a separate price prediction for every single house
+
+* But what to do when given a new house that's not in the sample?
+
+    * Which house in the sample is the one you should use for prediction?
+
+* The resulting prediction will have horrible out-of-sample fit, even though it has perfect in-sample fit
+
+* This is a classic case of .hi[overfitting]
+
+* We say that this prediciton has .hi[high variance] (i.e. the algorithm thinks random noise is something that is important to the model)
+
+
+---
+# Option 2: house price a linear function of sq footage
+
+* In this scenario, you simply run `lm(log(price) ~ sqft)`
+
+* When given a new house with a given square footage, you will only look at the square footage to predict the price of the new house
+
+* This algorithm will result in .hi[underfitting] because the functional form and features it uses for prediction are too simplistic
+
+* We say that this prediction has .hi[high bias] (i.e. the algorithm does not think enough variation is important to the model)
+
+
+---
+# Bias-variance tradeoff
+
+The .hi[bias-variance tradeoff] refers to the fact that we need to find a model that is complex enough to generalize to new datasets, but is simple enough that it doesn't "hallucinate" random noise as being important
+
+The way to optimally trade off bias and variance is via .hi[regularization]
+
+
+---
+# Visualizing the bias-variance tradeoff
+
+The following graphic from p. 194 of Hastie, Tsibshirani, and Friedman's *Elements of Statistical Learning* illustrates this tradeoff:
+
+.center[
+```{r echo = FALSE, fig.retina=1.3}
+knitr::include_graphics("biasVarianceHTFp194.png")
+```
+]
+
+
+
+---
+# Regularization methods
+
+- Regression models (OLS or logistic)
+    * L0 (Subset selection): penalize objective function by sum of the parameters $\neq 0$
+    * L1 (LASSO): penalize objective function by sum of absolute value of parameters
+    * L2 (Ridge): penalize objective function by sum of square of parameters
+    * Elastic net: penalize by a weighted sum of L1 and L2
+    
+- Tree models
+
+    * Depth, number of leaves, minimal leaf size, other criteria
+    
+- Random forests
+
+    * Number of trees, complexity of each tree, other criteria
+
+
+---
+# Regularization methods (cont'd)
+    
+- Nearest neighbors
+
+    * Number of neighbors
+
+- Neural networks
+
+    * Number of layers, number of neurons per layer, connectivity between neurons
+
+- Support Vector Machine
+
+    * L1/L2 regularization
+
+- Naive bayes
+
+    * Naturally geared towards not overfitting, but can be regularized with iterative variable selection algorithms (similar to stepwise/stagewise regression)
+
+
+---
+# Visualization of different predictors
+
+The following graphic shows a visualization of different classification algorithms, across two features (call them X and Y). Note the stark differences in the prediction regions.
+
+.center[
+```{r echo = FALSE, fig.retina=2}
+knitr::include_graphics("DYTAagSVAAACVc7.jpg")
+```
+]
+
+Source: [this tweet](https://twitter.com/rasbt/status/974115063308091392?s=12)
+
+
+---
+# Combined predictors
+Often you can get a better prediction by combining multiple sets of prediction. We call these .hi[combined predictors]. 
+
+You can think of the combined predictor as a "committee of experts." Each "expert" votes on the outcome and votes are aggregated in such a way that the resulting prediction ends up being better than any individual component prediction.
+
+3 types of combined predictors (cf. Mullainathan & Spiess, 2017):
+
+
+1. Bagging (unweighted average of predictors from bootstrap draws)
+1. Boosting (linear combination of predictions of a residual)
+1. Ensemble (weighted combination of different predictors)
+
+Combined predictors are regularized in the number of draws, number of iterations, or structure of the weights
+
+
+---
+# Visualization of combined predictors
+The following graphic shows a similar visualization as above, but now incorporates an ensemble prediction region. This provides some solid intuition for why ensemble predictors usually perform better than the predictions from any one algorithm.
+
+.center[
+```{r echo = FALSE, fig.retina=2}
+knitr::include_graphics("ensemble_decision_regions_2d.png")
+```
+]
+
+Source: [The `mlxtend` GitHub repository](https://github.com/rasbt/mlxtend)
+
+
+---
+# Measuring prediction accuracy
+How do we measure prediction accuracy? It depends on if our target variable is continuous or categorical
+
+
+---
+# Measuring prediction accuracy when $y$ is continuous
+
+\begin{align*}
+\text{Mean Squared Error (MSE)} &= \frac{1}{N}\sum_i (y_i - \hat{y}_i)^2 \\
+\text{Root Mean Squared Error (RMSE)} &= \sqrt{\frac{1}{N}\sum_i (y_i - \hat{y}_i)^2} \\
+\text{Mean Absolute Error (MAE)} &= \frac{1}{N}\sum_i \left|y_i - \hat{y}_i\right|
+\end{align*}
+where $N$ is the sample size
+
+---
+# Measuring prediction accuracy when $y$ is binary
+
+The .hi[confusion matrix] which compares how often $y$ and $\hat{y}$ agree with each other (i.e. for what fraction of cases $\hat{y} = 0$ when $y = 0$)
+
+Example confusion matrix
+
+|   |  $\hat{y}$ |   | 
+|--|--|--|
+|  $y$ |  0 |  1 | 
+|  0 |  True negative |  False positive | 
+|  1 |  False negative |  True positive | 
+
+
+---
+# Using the confusion matrix
+The three most commonly used quantities that are computed from the confusion matrix are:
+
+
+1. .hi[sensitivity (aka recall):] what fraction of $y = 1$ have $\hat{y} = 1$ ? (What is the true positive rate?)
+2. .hi[specificity:] what fraction of $y = 0$ have $\hat{y} = 0$ ? (What is the true negative rate?)
+3. .hi[precision:] what fraction of $\hat{y} = 1$ have $y = 1$ ? (What is the rate at which positive predictions are true?)
+
+The goal is to trade off Type I and Type II errors in classification
+
+
+---
+# F1 score
+The .hi[F1 score] is the most common way to quantify the tradeoff between Type I and Type II errors
+
+\begin{align*}
+F1 &= \frac{2}{\frac{1}{\text{recall}} + \frac{1}{\text{precision}}}
+\end{align*}
+
+- $F1 \in [0,1]$ with 1 being best
+
+- It is the harmonic mean of recall and precision
+
+- There are a bunch of other quantities that one could compute from the confusion matrix, but we won't cover any of those
+
+
+---
+# Why use the confusion matrix?
+
+When assessing the predictive accuracy of a classification problem, we want to make sure that we can't "game" the accuracy measure by always predicting "negative" (or always predicting "positive"). This is critical for cases like classifying emails as "spam" or "ham" because of the relative paucity of "spam" messages.
+
+In other words, if spam messages are only 1% of all messages seen, we don't want to be able to always predict "ham" and have that be a better measure of accuracy than actually trying to pin down the 1% of spam messages.
+
+The F1 measure attempts to quantify the tradeoff between Type I and Type II errors (false negatives and false positives) that would be rampant if we were to always predict "ham" in the email example.
+
+
+---
+# Cross validation
+
+How do we decide what level of complexity our algorithm should be, especially when we can't see out-of-sample?
+
+The answer is we choose values of the .hi[tuning parameters] that maximize out-of-sample prediction
+
+for example:
+
+
+- the $\lambda$ that comes in front of L1, L2, and elastic net regularization
+- the maximum depth of the tree or the min. number of observations within each leaf
+- etc.
+
+
+---
+# Splitting the sample
+To peform cross-validation, one needs to split the sample. There are differing opinions:
+
+Camp A ("Holdout")
+
+
+1. Training data (~70%)
+1. Test ("holdout") data (~30%)
+
+Camp B ("Cross-validation")
+
+
+1. Training data (~60%)
+1. Validation data (~20%)
+1. Test data (~20%)
+
+
+---
+# Splitting the sample (continued)
+
+Sample is split randomly, .hi[or] randomly according to how it was generated (e.g. if it's panel data, sample *units*, not observations)
+
+It is ideal to follow the "Cross-validation" camp, but in cases where you don't have many observations (training examples), you may have to go the "Holdout" route.
+
+
+---
+# k-fold cross-validation
+Due to randomness in our data, it may be better to do the cross validation multiple times. To do so, we take the 80% training-plus-validation sample and randomly divide it into the 60/20 components k number of times. Typically k is between 3 and 10. (See graphic below)
+
+
+.center[
+```{r echo = FALSE, fig.retina=1.3}
+knitr::include_graphics("k-foldCV.png")
+```
+]
+
+In the extreme, one can also do *nested* k-fold cross-validation, wherein the test set is shuffled some number of times and the k-fold CV is repeated each time. So we would end up with "3k" fold CV, for example. For simplicity, we'll only use simple k-fold CV in this course.
