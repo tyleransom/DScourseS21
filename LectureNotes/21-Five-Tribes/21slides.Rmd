@@ -1,0 +1,638 @@
+---
+title: "Lecture 21"
+subtitle: "The Five Tribes of Machine Learning"
+author: Tyler Ransom
+date: ECON 5253, University of Oklahoma
+output:
+  xaringan::moon_reader:
+    includes:
+        in_header: "21slides_files/mathjax-equation-numbers.html"
+    css: ['default', 'metropolis', 'metropolis-fonts', 'byu-colors.css']
+    # self_contained: true
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: '16:9'
+
+---
+
+```{r, load_refs, include=FALSE, cache=FALSE}
+library(RefManageR)
+library(tidyverse)
+BibOptions(check.entries = FALSE,
+           bib.style = "authoryear",
+           style = "markdown",
+           hyperlink = FALSE,
+           dashed = TRUE)
+#biblio <- ReadBib("../../References/References.bib", check = FALSE)
+#knitr::opts_chunk$set(fig.retina=1.8)
+```
+
+# Plan for the day
+
+- Go over the 5 Tribes of Machine Learning
+
+- Slight introduction to each
+
+- Some examples
+
+
+
+---
+# The 5 Tribes of Machine Learning
+Let's revisit the 5 Tribes of Machine Learning, according to Pedro Domingos
+
+These "tribes" are philosophical identities associated with commonly used regression and classification algorithms in machine learning
+
+| Tribe Name     | World view / Goal                                  | Master Algorithm(s)                       | R package(s)     |
+|----------------|----------------------------------------------------|-------------------------------------------|------------------|
+| Symbolists     | Inverse deduction (commonly called "induction")    | Tree models                               | `rpart`          |
+| Connectionists | Re-engineering the brain                           | Neural networks                           | `nnet`           |
+| Evolutionaries | Genomic evolution                                  | Genetic algorithms                        | `GA`             |
+| Bayesians      | Probabilistic inference (via Bayes' Rule)          | Naive Bayes                               | `e1071`          |
+| Analogizers    | Matching (i.e. analogizing) different bits of data | Nearest neighbor, Support Vector Machine  | `kknn`, `e1071`  |
+
+We'll go through each of these algorithms, how they are used, and how they are regularized
+
+
+
+
+---
+# Tree models
+
+Tree models seek to partition the data in such a way that observations are grouped according to the outcome $Y$
+
+These "groups" are called leaves. The goal of the model is twofold:
+
+1. Maximize .hi[similarity] of outcome within leaves (i.e. minimize RMSE, maximize F1 score)
+
+2. Maximize .hi[dissimilarity] of outcome across leaves
+
+
+
+
+---
+# Visualizing tree models
+
+.center[
+```{r echo = FALSE, fig.retina=1.3}
+knitr::include_graphics("Decision_Tennis.jpg")
+```
+]
+
+
+---
+# Pros and Cons of Tree models
+
+- Pros:
+
+    * Fully nonparametric
+
+    * Easy to interpret decision rules
+
+    * Built-in searching of interaction effects among features ($X$'s)
+
+    * Handles categorical features easily
+
+- Cons:
+
+    * Easy to overfit (i.e. make the tree too complex)
+
+
+
+---
+# Regularizing Decision Trees
+
+Since decision trees are nonparametric, we can't use L1 or L2 regularization
+
+Instead, we regularize according to the following criteria:
+
+1. Depth
+
+2. Number of nodes or leaves
+
+3. Minimal leaf size
+
+4. Information gain at splits (i.e. how "greedy" the algorithm is)
+
+
+
+---
+# Visualizing Decision Trees
+
+Example from Titanic Mortality Data
+
+.center[
+```{r echo = FALSE, fig.retina=1.8}
+knitr::include_graphics("README-titanic_plot-1.png")
+```
+]
+
+Source: Grant McDermott's "parttree" R package ([here](https://github.com/grantmcdermott/parttree/blob/master/man/figures/README-titanic_plot-1.png))
+
+
+
+
+---
+# Neural networks
+
+- Neural networks model the brain
+
+- They work by forming "connections" across "neurons" which work together to decide whether to "fire" 
+
+- A given neuron only fires if it has enough "activation energy"
+
+- Why is this the case? Because that's how the human brain works, and the human brain is the triumph of biology
+
+
+
+---
+# Neurons
+
+- The human brain is composed of many neurons (brain cells)
+
+- Your body receives a stimulus from one of the 5 senses, which travels to the brain
+
+- Once arriving at the brain, it travels through a network of neurons until it reaches the appropriate part of the brain (e.g. the part governing thought or motor skills, or speech, etc.)
+
+- Because of something known as neuroplasticity, the brain learns over time how to react to any given pattern of incoming signals
+
+
+
+---
+# Modeling the human brain
+
+Neural nets contain the following components:
+
+* Input layer / features
+    - Act like external stimuli to your own brain (e.g. sound, vision, etc.)
+* Network structure
+    - Must decide a priori how many layers, how many neurons per layer
+* Activation function
+    - This determines the circumstances under which each neuron will "fire"
+    - Main activiation functions are:
+        * Sigmoid (logistic function); Tanh (hyperbolic tangent function)
+        * ReLU (kinked line); Linear
+        * Step function
+* Output layer / outcome
+    - The outcome comes at the end and is the biological equivalent of a response to the stimulus
+
+---
+# Neural net playgroud
+
+- Each of these components can drastically affect performance of the neural network
+
+- Thus, cross-validation and regularization are critical when working with neural networks
+
+- To see how this works, check out [Google's Neural Net Playground](https://www.google.com/url?q=https%3A%2F%2Fplayground.tensorflow.org%2F%23activation%3Dtanh%26regularization%3DL1%26batchSize%3D22%26dataset%3Dspiral%26regDataset%3Dreg-gauss%26learningRate%3D0.03%26regularizationRate%3D0.001%26noise%3D5%26networkShape%3D7%2C6%26seed%3D0.41460%26showTestData%3Dfalse%26discretize%3Dtrue%26percTrainData%3D70%26x%3Dtrue%26y%3Dtrue%26xTimesY%3Dtrue%26xSquared%3Dtrue%26ySquared%3Dtrue%26cosX%3Dfalse%26sinX%3Dtrue%26cosY%3Dfalse%26sinY%3Dtrue%26collectStats%3Dfalse%26problem%3Dclassification%26initZero%3Dfalse%26hideText%3Dfalse&sa=D&sntz=1&usg=AFQjCNHj4f1ROekPPItg1SLlk2FMnI6FVw)
+
+
+
+---
+# A very simple neural net
+
+.center[
+```{r echo = FALSE, fig.retina=0.1}
+knitr::include_graphics("neuralNetwork.png")
+```
+]
+
+
+---
+# Pros and Cons of Neural Networks
+
+- Pros:
+
+    * Built in flexibility to come up with arbitrary nonlinear functions for prediction
+
+    * Strong performance, particularly in image recognition
+
+    * Takes a short time to compute on the test data
+
+- Cons:
+
+    * Can take a very long time to train
+
+    * Can take a lot of computational resources to train
+
+    * Very easy to overfit
+
+    
+
+---
+# Regularizing Neural Networks
+Regularization of neural networks comes in three forms:
+
+1. L1/L2 regularization on connections among the layers
+
+2. Restricting the number of neurons in a given layer
+
+3. Restricting the number of hidden layers
+
+
+---
+# What is "Deep Learning"? 
+
+- .hi[Deep learning] refers to learning that is done using neural networks with more than one hidden layer
+
+- That's it. Don't be fooled by buzzwords!
+
+- That said, deep learning forms the basis of many modern AI technologies
+
+
+---
+# Deep Learning, GPT-3, and technological progress
+
+- .hi[GPT-3] ("Generative Pre-trained Transformer 3") is the current state of the art neural net (as of early 2021)
+
+- It is "an autoregressive language model that uses deep learning to produce human-like text" ([Wikipedia](https://en.wikipedia.org/wiki/GPT-3))
+
+- In 2012, the state of the art was AlexNet, which had 650,000 neurons and 60 million connections
+
+- GPT-3 has 100 million neurons and 175 billion connections
+
+- The human brain has 100 billion neurons and 100 trillion connections
+
+- Cool podcast on AI developments: [here](https://80000hours.org/podcast/episodes/brian-christian-the-alignment-problem/)
+
+
+---
+# Other interesting facts about neural nets
+
+- Due to their computational burden, SGD was invented to aid in the computation of neural networks
+
+- It turns out that linear regression and logistic regression each are special cases of the neural network
+
+- Thus, these two well-known algorithms can be thought of as "connectionist" algorithms
+
+
+---
+# Genetic Programming
+
+- Genetic programming seeks to approximate an arbitrary nonlinear function by simulating genetic mutation
+
+- In each "generation" the mutation with the best "fitness" is then chosen as the next generation's parents.
+
+We won't go into the details of this approach, since it is not immediately applicable to data analysis tasks
+
+If you're curious about these types of algorithms, you can check out a nice primer [here](https://cran.r-project.org/web/packages/GA/vignettes/GA.html)
+
+
+
+---
+# Naive Bayes
+
+- .hi[Bayes' Rule] is the idea that one should update one's degree of belief in a given hypothesis once she receives new evidence
+
+- If the evidence is consistent with the hypothesis, the probability of belief goes up
+
+- If not, the probability goes down
+
+
+
+---
+# Bayes Rule example
+
+- Adapted from *The Master Algorithm* (p. 144): "If you test positive for COVID-19, your probability of actually having it goes up"
+
+- The "updated" probability is called the .hi[posterior probability] while the original probability is called the .hi[prior probability]
+
+- Mathematically, Bayes' Rule states that, for any two events A and B: 
+\begin{align*}
+\Pr(A | B) &= \frac{\Pr(A)\Pr(B | A)}{\Pr(B)}
+\end{align*}
+
+- Maybe a better way to put it is
+\begin{align*}
+\Pr(\text{hypothesis} | \text{evidence}) &= \frac{\Pr(\text{hypothesis})\Pr(\text{evidence} | \text{hypothesis})}{\Pr(\text{evidence})}
+\end{align*}
+
+
+
+---
+# Bayes Rule example (cont'd)
+
+- So what does that mean? Let's think about it with the COVID-19 example
+
+- We want to know the likelihood of our having COVID-19 given that the test returned a positive result
+
+- Let's replace "A" with "has COVID19" and "B" with "tested positive" in the previous formula:
+.small[
+\begin{align*}
+\Pr(\text{has COVID19} | \text{tested positive}) &= \frac{\Pr(\text{has COVID19})\Pr(\text{tested positive} | \text{has COVID19})}{\Pr(\text{tested positive})}
+\end{align*}
+]
+
+---
+# Bayes Rule example (cont'd)
+
+Suppose the following:
+
+- $\Pr(\text{has COVID19}) = 0.003$ in the population
+
+- $\Pr(\text{tested positive}) = 0.01$ [regardless of whether or not you actually have COVID-19] 
+
+- $\Pr(\text{tested positive} | \text{has COVID19}) = 0.99$
+
+    - i.e. if you actually have COVID-19, the test would be positive with probability 0.99 
+
+Plugging this into the above formula, we get
+\begin{align*}
+\Pr(\text{has COVID19} | \text{tested positive}) &= \frac{0.003 \times 0.99}{0.01}\\
+&= 0.297
+\end{align*}
+
+---
+# Bayes Rule example: intuition
+
+- Before getting the test, we believed we had COVID-19 with probability 0.003 (the population rate of COVID-19)
+
+- After getting the positive test, we update our prior to be 0.297
+
+- Why not update all the way up to 0.99? 
+
+- Because the test could yield false positives, so we don't want to be too hasty in our belief updating
+
+- If $\Pr(\text{tested positive})$ were equal to 0.003 (instead of 0.01), then we'd be really worried because that would mean that the false positive rate of the test was small
+
+- If that were the case, our posterior probability would skyrocket to 0.99 from 0.297
+
+
+---
+# Naive Bayes and Bayes Rule
+
+- How does the Bayes Rule formula relate to Naive Bayes as a classification algorithm? 
+
+- It turns out that we can compute an observation's probability of being a certain class $\Pr(Y = y), y\in \{0,1\}$ based on the data that we have
+
+- We want to know $\Pr(Y | X)$ which is our "updated" hypothesis or posterior probability
+
+- Let's say we want to classify people as college graduates or not 
+
+- Our prior would be the rate of college graduates in our data set (e.g. 30%)
+
+- We observe their $X$'s (e.g. family income, parent's education, high school class rank, etc.)
+
+
+
+
+---
+# Naive Bayes example
+
+- We want to look at a new observation's $X$'s and make a reasonable guess as to whether they are a college graduate
+
+- The formula we would use to update this is: 
+
+\begin{align*}
+&\Pr(\text{college graduate} | \text{family income in 3rd quintile}) \\
+&= \frac{\Pr(\text{college graduate})\Pr(\text{family income in 3rd quintile} | \text{college graduate})}{\Pr(\text{family income in 3rd quintile})}\\
+ &= \frac{0.30 \cdot 0.50}{0.20}\\
+ &= 0.75
+\end{align*}
+
+
+---
+# Naive Bayes example (continued)
+
+- What if we wanted to look at a case that had family income in 3rd quintile *and* whose father graduated from college? 
+
+- Here's where the "naivete" comes in handy: We assume that parental education is independent of family income (this is dumb, I know, but bear with me), which greatly simplifies the following formula:
+
+.small[
+\begin{align*}
+&\Pr(\text{coll grad} | \text{faminc in 3rd quint},\text{father coll grad})\\
+&= \Pr(\text{coll grad})\Pr(\text{faminc in 3rd quint} | \text{coll grad})\Pr(\text{father coll grad} | \text{coll grad})
+\end{align*}
+]
+
+- In practice, we typically ignore the denominator $\Pr(\text{data})$ because it doesn't change with the outcome
+
+- For a primer on Naive Bayes, consult [here](http://www.saedsayad.com/naive_bayesian.htm)
+
+
+---
+# Regularization in Bayesian algorithms
+
+- Bayesian algorithms actually don't use regularization in the same way as the other algorithms
+
+- Instead, the prior belief acts as a way to regularize to prevent overfitting
+
+
+---
+# Pros and Cons of Naive Bayes
+
+- Pros:
+    * Easy to compute in training phase
+    * Works well in high dimensions
+- Cons:
+    * Relies on the .hi[naive] assumption that X variables are mutually indpendent
+    * Can be computationally expensive to compute in the testing phase
+
+- Naive Bayes is most famous for working well with spam classification and other text classification objectives (e.g. document classification)
+
+- In general it will work well in applications where interaction terms are not important
+
+
+
+---
+# k Nearest Neighbors (kNN) and Support Vector Machine (SVM)
+
+- kNN and SVM are the two workhorse algorithms of the analogizers
+
+- They seek to find commonality between different instances of data
+
+
+---
+# kNN
+
+- kNN is a nonparametric algorithm that finds a specific observations nearest neighbor where "nearest neighbor" is defined in terms of the $X$'s for each observation
+
+- Specifically, "nearest" is defined by some distance metric (e.g. Euclidean distance)
+
+- $k$ is the number of neighbors over which the prediction is calculated
+
+
+---
+# Example
+
+- Suppose we are trying to classify a voter as being Republican or Democrat 
+
+- We might look at their age, where they live, and how much education they have
+
+- To do the classification, we would follow these steps:
+    1. Look at a given observation's five (if k=5) "nearest" observations (in terms of Euclidean distance)
+    2. Compute what fraction of those neighbors are Republican
+    3. The quantity in step 2 would be our predicted probability of the new observation's likelihood of being Republican
+
+- For a nice illustration of the bias-variance tradeoff in kNN, see [here](http://scott.fortmann-roe.com/docs/BiasVariance.html)
+
+- Here is a [complete guide to kNN in Python and R](https://kevinzakka.github.io/2016/07/13/k-nearest-neighbor/)
+
+
+---
+# Regularization in kNN
+
+- The regularization parameter that needs to be cross-validated in kNN models is the number of neighbors, $k$
+
+- If k is too small (e.g. 1 or 2) it will result in overfitting (high variance)
+
+- If k is too large, it will result in underfitting (high bias)
+
+
+---
+# Pros and Cons of kNN
+
+- Pros:
+
+    * Nonparametric
+
+    * Easy to compute
+
+    * Easy to interpret
+
+    * Computationally light to compute in the training phase
+
+- Cons:
+
+    * Doesn't work well in large dimensions
+
+    * Computationally expensive to compute in the testing phase
+
+    
+---
+# SVM
+
+- SVM can be thought of as a generalization of kNN
+
+- It works much better in high-dimensional spaces
+
+- The goal of SVM is to find the .hi[largest separating hyperplane] between the positive and negative cases
+
+- It was originally set up to be a classification algorithm, but it can also be used for regression
+
+- Originally, SVMs were limited to hyperplanes, but due to a discovery known as the .hi[kernel trick], they can be used to draw arbitrarily nonlinear boundaries
+
+- We won't get into the specifics of SVM, but [here](https://www.quantstart.com/articles/Support-Vector-Machines-A-Guide-for-Beginners) is a nice primer for newbies
+
+
+---
+# Regularization in SVMs
+
+- The regularization parameters that needs to be cross-validated in SVM models are:
+
+    - $C$, which governs the size of the margin between positive and negative examples
+    
+    - other parameters that govern the complexity of the shape of the kernel function
+
+
+---
+# Pros and Cons of SVM
+
+- Pros:
+
+    * Effective in high-dimensional settings
+
+    * Computationally efficient for testing
+
+    * Allows for non-linear decision boundaries
+
+- Cons:
+
+    * Not well suited for "Big K" data (i.e. when the number of columns of X is larger than the number of rows)
+
+    * It doesn't produce a probabilistic out-of-sample prediction
+
+
+
+---
+# Using the Five Tribes' algorithms in `tidymodels`
+| Tribe Name     | Master Algorithm(s)     | R package | Regularization parameters | `tidymodels` algorithm name |
+|----------------|-------------------------|-----------|---------------------------|----------------------|
+| Symbolists     | Tree models             | `rpart`   | `minsplit` (integer), `minbucket` (integer), `cp` (numeric, typically very small) | `classif.rpart` |
+| Connectionists | Neural networks         | `nnet`    | `size` (number of neurons in hidden layer; integer), `decay` (lambda; numeric) | `classif.nnet` |
+| Evolutionaries | Genetic algorithms      | `GA`      | N/A | N/A |
+| Bayesians      | Naive Bayes             | `e1071`   | N/A | `classif.naiveBayes` |
+| Analogizers    | Nearest neighbor        | `kknn`    | `k` (integer) | `classif.kknn` |
+|                | Support Vector Machine  | `e1071`   | `cost` (numeric ranging from 2^-10 to 2^10); `gamma` (same as `cost`) | `classif.svm` |
+
+
+
+---
+# Ensemble models
+
+As mentioned previously, it can sometimes be optimal to combine across two of the tribes
+
+An example of this is the following [YouTube video](https://youtu.be/Aut32pR5PQA) which depicts cars learning to drive on track
+
+The approach combines a neural network with a genetic algorithm
+
+
+
+---
+# Recommender systems
+
+- One commonly used application for prediction algorithms is recommender systems
+
+- For example, Netflix or YouTube want to "recommend" to you what to watch next, based on what you've shown interest in previously
+
+- The target variable here is "how much the user will like offering W" and the features are things like "list of shows the user has watched previously" or "list of shows user showed interest in previously" (e.g. by reading the overview of a video)
+
+
+
+---
+# Ways to form a recommender system
+
+1. Collaborative filtering
+
+2. Content-based filtering
+
+3. Hybrid recommender systems
+
+
+
+---
+# Collaborative filtering
+
+* Create recommendations based on what users who are similar to you are consuming
+* e.g. if we both like rock music, but you listen to a slightly different set of bands than I do, then the best recommendation for me are the bands that you listen to, but I don't
+* This approach relies on having a large number of users
+* It assumes that people who have a lot in common will continue to have a lot in common
+* kNN is the fundamental way to pick out the new recommendations using this approach
+
+---
+# Content-based filtering
+
+* Create recommendations based on quantifiable characteristics about what you are consuming
+* e.g. come up with a way to describe each product's characteristics (e.g. a song by Rush vs. a song by Metallica, etc.)
+* Recommend new products to users whose average description matches the new products
+* This approach relies on coming up with a way to quantify each product's characteristics
+* It will only recommend new products that are closely related to the user's existing portfolio
+* Bayesian classifiers and neural networks are popular algorithms for offering new recommendations using this approach
+
+
+---
+# Hybrid recommender systems
+
+* Because collaborative and content-based filtering each have advantages and disadvantages, it often is the case that better recommendations can be had by combining the two approaches
+
+
+---
+# How to build a recommender system in R
+
+- The simplest R package to do this is called `recommenderlab` and a step-by-step example is [here](https://www.r-bloggers.com/recommender-systems-101-a-step-by-step-practical-example-in-r/)
+
+- Another walkthrough using the same library to build moving recommendations is [here](http://rstudio-pubs-static.s3.amazonaws.com/150913_3ccebcc146d84e5e98c40fc548322929.html)
+
+- As far as I can tell, `tidymodels` does not provide an interface to the `recommenderlab` package.
+
+---
+# Helpful links
+
+* [Mullainathan & Spiess (2017)](https://www.aeaweb.org/articles?id=10.1257/jep.31.2.87&within%5Btitle%5D=on&within%5Babstract%5D=on&within%5Bauthor%5D=on&journal=3&q=mullainathan&from=j)
+* [Kaggle notebook by Pondering Panda, showing how to use `tidymodels`](https://www.kaggle.com/xanderhorn/train-r-ml-models-efficiently-with-tidymodels)
+* [Complete list of `tidymodels` algorithms](http://tidymodels-org.github.io/tidymodels-tutorial/devel/html/integrated_learners/index.html)
+* [Quick start `tidymodels` tutorial](https://tidymodels-org.github.io/tidymodels-tutorial/release/html/index.html)
+* Laurent Gatto's [*An Introduction to Machine Learning with R*](https://lgatto.github.io/IntroMachineLearningWithR/) online textbook
+* [Five Tribes blog post](https://medium.com/@jrodthoughts/the-five-tribes-of-machine-learning-c74d702e88da)
+* [Blog post](https://medium.com/the-theory-of-everything/understanding-activation-functions-in-neural-networks-9491262884e0): "Understanding Activation Functions in Neural Networks"

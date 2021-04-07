@@ -1,0 +1,420 @@
+---
+title: "Lecture 20"
+subtitle: "Using `tidymodels` to train ML models"
+author: Tyler Ransom
+date: ECON 5253, University of Oklahoma
+output:
+  xaringan::moon_reader:
+    includes:
+        in_header: "20slides_files/mathjax-equation-numbers.html"
+    css: ['default', 'metropolis', 'metropolis-fonts', 'byu-colors.css']
+    # self_contained: true
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: '16:9'
+
+---
+
+```{r, load_refs, include=FALSE, cache=FALSE}
+library(RefManageR)
+library(tidyverse)
+BibOptions(check.entries = FALSE,
+           bib.style = "authoryear",
+           style = "markdown",
+           hyperlink = FALSE,
+           dashed = TRUE)
+#biblio <- ReadBib("../../References/References.bib", check = FALSE)
+#knitr::opts_chunk$set(fig.retina=1.8)
+```
+
+# Plan for the day
+
+- Review topics from last class (bias, variance, regularization)
+
+- Practice training and tuning ML models using R's `tidymodels` package
+
+
+
+---
+# Quick review
+
+- The main goal of machine learning is to maximize out-of-sample prediction of the target variable $y$
+
+- $y$ can be continuous or categorical
+
+- We measure prediction accuracy differently depending on if $y$ is continuous or not
+
+- A model is .hi[overfit] or has .hi[high variance] if it predicts well in-sample but poorly out-of-sample
+
+- A model is .hi[underfit] or has .hi[high bias] if it predicts poorly both in- and out-of-sample
+
+- We optimally trade off bias and variance with regularization
+
+
+
+---
+# Regularization
+
+- Regularization is a way of penalizing model complexity
+
+- For models where $y$ is continuous, we can use L1 or L2 regularization
+
+- e.g. with linear regression, we penalize the objective function:
+
+\begin{align*}
+\min_\beta (y-X\beta)'(y-X\beta) + \lambda \sum_k \vert\beta_k\vert & &(\text{L1})\\
+\min_\beta (y-X\beta)'(y-X\beta) + \lambda \sum_k (\beta_k)^2       & &(\text{L2})
+\end{align*}
+
+- We obtain estimates of the $\beta$'s in the .hi[training] phase
+
+- We obtain the best value of $\lambda$ in the .hi[validation] phase
+
+
+
+
+---
+# k-fold cross-validation
+Take the 80% of your data that isn't the test set and randomly divide it into a remaining 80/20 set $k$ number of times. Typically $k$ is between 3 and 10. (See graphic below)
+
+
+.center[
+```{r echo = FALSE, fig.retina=1.3}
+knitr::include_graphics("../19-Intro-ML/k-foldCV.png")
+```
+]
+
+
+
+---
+# How to do ML in R
+
+There are a couple of nice packages in R that will do k-fold cross validation for you, and will work with a number of commonly used prediction algorithms
+
+1. `tidymodels`
+
+2. `mlr3`
+
+Both packages are well built and do many of the same things; we'll be using `tidymodels` for the rest of this unit of the course
+
+In Python, [`scikit-learn`](https://scikit-learn.org/stable/) is the workhorse machine learning frontend
+
+In Julia, [`MLJ.jl`](https://alan-turing-institute.github.io/MLJ.jl/dev/) is the workhorse machine learning frontend
+
+
+---
+# `tidymodels`
+
+- Like `tidyverse`, `tidymodels` is a collection of packages:
+
+    - [`rsample`](https://rsample.tidymodels.org/): for data splitting 
+    
+    - [`recipes`](https://recipes.tidymodels.org/index.html): for pre-processing
+    
+    - [`parsnip`](https://www.tidyverse.org/blog/2018/11/parsnip-0-0-1/): for model building 
+    
+    - [`dials`](https://github.com/tidymodels/dials) and [`tune`](https://github.com/tidymodels/tune): parameter tuning 
+    
+    - [`yardstick`](https://github.com/tidymodels/yardstick): for model evaluations 
+    
+    - [`workflows`](https://github.com/tidymodels/workflows): for bundling a pieplne that bundles together pre-processing, modeling, and post-processing requests 
+
+
+
+---
+# How to use `tidymodels`
+
+You need to tell `tidymodels` the following information before it will run:
+
+1. Training data (which will end up being split $k$ ways when doing cross-validation)
+2. Testing data
+3. The task at hand (e.g. regression or classification)
+4. The validation scheme (e.g. 3-fold, 5-fold, or 10-fold CV)
+5. The method used to tune the parameters of the algorithm (e.g. $\lambda$ for LASSO)
+6. The prediction algorithm (e.g. "decision tree")
+7. The parameters of the prediction algorithm that need to be cross-validated (e.g. tree depth, $\lambda$, etc.)
+
+For a complete list of prediction algorithms supported by `tidymodels`, see [here](https://topepo.github.io/caret/available-models.html)
+
+
+---
+# Example datasets
+
+- UC Irivne hosts a number of ML databases
+
+- These are similar to R datasets `iris`, `mtcars`, etc.
+
+- But they are used in ML applications
+
+- Today and in the problem set, you'll use the `housing` data
+
+
+---
+# Packages you'll need to install
+
+- `tidymodels`
+
+- This should install all of the sub-packages (`parsnip`, `recipes`, `rsample`, `tune`, `workflows`, `yardstick`)
+
+- But in case it doesn't, you'll need to install those as well
+
+- Also install `glmnet` for LASSO, ridge regression and elastic net
+
+
+---
+# Simple example
+Let's start by doing linear regression on a well-known dataset: the Boston housing data from UC Irivne
+
+First step: read in the data and assign column names
+
+.scroll-box-10[
+```r
+library(tidyverse)
+library(tidymodels)
+library(magrittr)
+
+housing <- read_table("http://archive.ics.uci.edu/ml/machine-learning-databases/housing/housing.data", col_names = FALSE)
+names(housing) <- c("crim","zn","indus","chas","nox","rm","age","dis","rad","tax","ptratio","b","lstat","medv")
+
+# From UC Irvine's website (http://archive.ics.uci.edu/ml/machine-learning-databases/housing/housing.names)
+#    1. CRIM      per capita crime rate by town
+#    2. ZN        proportion of residential land zoned for lots over 25,000 sq.ft.
+#    3. INDUS     proportion of non-retail business acres per town
+#    4. CHAS      Charles River dummy variable (= 1 if tract bounds river; 0 otherwise)
+#    5. NOX       nitric oxides concentration (parts per 10 million)
+#    6. RM        average number of rooms per dwelling
+#    7. AGE       proportion of owner-occupied units built prior to 1940
+#    8. DIS       weighted distances to five Boston employment centres
+#    9. RAD       index of accessibility to radial highways
+#    10. TAX      full-value property-tax rate per $10,000
+#    11. PTRATIO  pupil-teacher ratio by town
+#    12. B        1000(Bk - 0.63)^2 where Bk is the proportion of blacks by town
+#    13. LSTAT    lower status of the population
+#    14. MEDV     Median value of owner-occupied homes in $1000's
+```
+]
+
+
+---
+# Divide data into training and test sets
+
+- Before we do anything else, we should demarcate the training and test sets
+
+- We can use `rsample` for this
+
+```r
+housing_split <- initial_split(housing, prop = 0.8)
+housing_train <- training(housing_split)
+housing_test  <- testing(housing_split)
+```
+
+
+---
+# Data pre-processing with `recipes`
+
+- Before we do any modeling, we might need to pre-process the data
+
+- We talked about this earlier in the semester
+
+- Some common pre-processing steps:
+
+    - log transformation
+    
+    - convert categorical variables to `factor`s
+    
+    - create interaction terms
+    
+    - data imputation (should we use mean/mode imputation?)
+    
+    - ...
+
+
+---
+# Using `recipes` on the UCI `housing` data
+
+```r
+housing_recipe <- recipe(medv ~ ., data = housing) %>%
+                  # convert outcome variable to logs
+                  step_log(all_outcomes()) %>%
+                  # convert 0/1 chas to a factor
+                  step_bin2factor(chas) %>%
+                  # create interaction term between crime and nox
+                  step_interact(terms = ~ crim:nox) %>%
+                  # create square terms of some continuous variables
+                  step_poly(dis,nox)
+```
+
+
+---
+# `prep()` and `bake()` your `recipe()`
+
+- With your recipe created, now you can apply it to the training and test sets
+
+- Three steps:
+
+    1. `prep()` your recipe
+    2. Apply your "prepped" recipe to the training data with `juice()`
+    3. Apply your "prepped" recipe to the testing data with `bake()`
+
+```r
+housing_prep <- housing_recipe %>% prep(housing_train, retain = TRUE)
+housing_train_prepped <- housing_prep %>% juice
+housing_test_prepped  <- housing_prep %>% bake(new_data = housing_test)
+```
+
+
+---
+# Now train the model with OLS
+
+```r
+housing_train_x <- housing_train_prepped %>% select(-medv)
+housing_test_x  <- housing_test_prepped  %>% select(-medv)
+housing_train_y <- housing_train_prepped %>% select( medv)
+housing_test_y  <- housing_test_prepped  %>% select( medv)
+
+# Fit the regression model
+est.ols <- lm(housing_train_y$medv ~ ., data = housing_train_x)
+# Predict outcome for the test data
+ols_predicted <- predict(est.ols, newdata = housing_test_x)
+# Root mean-squared error
+sqrt(mean((housing_test_y$medv - ols_predicted)^2))
+```
+
+
+---
+# OLS the easy way
+
+- The previous slide was a lot of work to do something simple!
+
+- We could have more easily done it this way:
+
+```r
+# easy way
+est.ols.easy <- lm(log(medv) ~ crim + zn + indus + as.factor(chas) + 
+                               rm + age + rad + tax + ptratio + b + 
+                               lstat + crim:nox + poly(dis,2) + poly(nox,2), 
+                               data = housing_train)
+# Predict outcome for the test data
+ols_easy_predicted <- predict(est.ols.easy, newdata = housing_test_x)
+# Root mean-squared error
+sqrt(mean((housing_test_y$medv - ols_easy_predicted)^2))
+```
+
+- But doing it the "roundabout" way will have dividends
+
+
+---
+# Using `parsnip` to train models
+
+- `parsnip` is a package for training models
+
+- You specify the following up-front and it takes care of the rest:
+
+    1. Specify a model (e.g. "linear regression" or "decision tree")
+    
+    2. Specify an engine (e.g. "lm" or "glmnet", etc.)
+    
+    3. Specify a mode (e.g. "regression" or "classification")
+
+
+---
+# OLS training using `parsnip`
+
+```r
+ols_spec <- linear_reg() %>%       # Specify a model
+            set_engine("lm") %>%   # Specify an engine: lm, glmnet, stan, keras, spark
+            set_mode("regression") # Declare a mode: regression or classification
+
+ols_fit <- ols_spec %>%
+           fit_xy(x = housing_train_x, y = housing_train_y)
+
+# inspect coefficients
+tidy(ols_fit$fit$coefficients) %>% print
+tidy(est.ols) %>% print
+
+# predict out of sample
+ols_parsnip_predicted <- predict(ols_fit, housing_test_x)
+```
+
+
+
+---
+# Measuring model performance with `yardstick`
+
+- `yardstick` allows the user to define performance metrics
+
+    - e.g. `rmse`, `mae`, `rsq`
+    
+    - or `accuracy`, `precision`, `recall` for classification tasks
+
+```r
+preds <- bind_cols(housing_test_y,ols_parsnip_predicted)
+rmse <- rmse(preds,medv,`.pred`)
+# in-sample RMSE was 0.1852
+# out-of-sample RMSE is 0.173
+
+rsq <- rsq_trad(preds,medv,`.pred`)
+# in-sample R^2 was 0.814
+# out-of-sample R^2 is 0.764
+```
+
+
+---
+# Now with LASSO instead of OLS
+
+- We've already got our training and test data from `recipes`
+
+- Now we want to train LASSO with `parsnip`
+
+- We also want to use `tune` to get the optimal value of $\lambda$
+
+- To do so, we adjust the inputs to the `linear_reg()` function of `parsnip`
+
+
+---
+# Setting up the LASSO task
+
+```r
+tune_spec <- linear_reg(
+                        penalty = tune(), # tuning parameter
+                        mixture = 1       # 1 = lasso, 0 = ridge
+                       ) %>% 
+             set_engine("glmnet") %>%
+             set_mode("regression")
+
+# define a grid over which to try different values of lambda
+lambda_grid <- grid_regular(penalty(), levels = 50)
+
+# 10-fold cross-validation
+rec_folds <- vfold_cv(housing_train_x %>% bind_cols(tibble(medv = housing_train_y)), v = 10)
+```
+
+
+
+---
+# Create a workflow to do k-fold CV
+
+```r
+# Workflow
+rec_wf <- workflow() %>%
+          add_model(tune_spec) %>%
+          add_formula(medv ~ .)
+
+# Tuning results
+rec_res <- rec_wf %>%
+           tune_grid(
+                     resamples = rec_folds,
+                     grid = lambda_grid
+                    )
+```
+
+
+---
+# Optimal $\lambda$
+
+```r
+top_rmse  <- show_best(rec_res, metric = "rmse")
+best_rmse <- select_best(rec_res, metric = "rmse")
+```
