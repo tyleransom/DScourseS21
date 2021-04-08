@@ -94,58 +94,54 @@ As with the previous problem sets, you will submit this problem set by pushing t
 \begin{questions}
 \question Type \texttt{git pull origin master} from your OSCER \texttt{DScourseS21} folder to make sure your OSCER folder is synchronized with your GitHub repository. 
 
-\question Synchronize your fork with the class repository by doing a \texttt{git fetch upstream} and then merging the resulting branch. (\texttt{git merge upstream/master -m ``commit message''})
+\question Synchronize your fork with the class repository by doing a \texttt{git pull upstream master}.
 
 \question Install the following machine learning packages if you haven't already:
 \begin{itemize}
-    \item \texttt{mlr}
+    \item \texttt{tidymodels}
     %\item \texttt{rpart}
     %\item \texttt{e1071}
     \item \texttt{glmnet}
     %\item \texttt{nnet}
 \end{itemize}
 
-\question Load the housing data from UCI, following the example in the lecture notes.
+\question Load the housing data from UCI, following the example in the lecture notes (Lecture 20).
 
-\question Add new features to the data set by creating 6th degree polynomials of each of the features, as well as 3rd degree interactions of each. To do so, add the following code to your script.\footnote{Credit to Adam Kapelner in \href{https://github.com/mlr-org/mlr/issues/564}{this GitHub issue} for providing the following code.} What is the dimension of your training data (\texttt{housing.train})?
+\question Set the seed to \texttt{123456}.
+
+\question Create two data sets called \texttt{housing\_train} and \texttt{housing\_test} using the \texttt{initial\_split()} function from the \texttt{rsample} package, following the example in the lecture notes.
+
+\question Create a new \texttt{recipe()} that takes the log of the housing value, converts \texttt{chas} to a factor, creates 6th degree polynomials of each of the continuous features (i.e. everything except \texttt{chas}), and linear interactions of each. To do so, add the following code to your script. What is the dimension of your training data (\texttt{housing\_train})? How many more $X$ variables do you have than in the original \texttt{housing} data?
 \begin{lstlisting}[language=R]
-housing$lmedv    <- log(housing$medv)
-housing$medv     <- NULL # drop median value
-formula    <- as.formula(lmedv ~ .^3 +
-                         poly(crim, 6) + 
-                         poly(zn, 6) + 
-                         poly(indus, 6) + 
-                         poly(nox, 6) + 
-                         poly(rm, 6) +
-                         poly(age, 6) + 
-                         poly(dis, 6) +
-                         poly(rad, 6) + 
-                         poly(tax, 6) + 
-                         poly(ptratio, 6) + 
-                         poly(b, 6) + 
-                         poly(lstat, 6))
-mod_matrix <- data.frame(model.matrix(formula, housing))
-#now replace the intercept column by the response since MLR will do 
-#"y ~ ." and get the intercept by default
-mod_matrix[, 1] = housing$lmedv
-colnames(mod_matrix)[1] = "lmedv" #make sure to rename it otherwise MLR won't find it
-head(mod_matrix) #just make sure everything is hunky-dory
+housing_recipe <- recipe(medv ~ ., data = housing) %>%
+                  # convert outcome variable to logs
+                  step_log(all_outcomes()) %>%
+                  # convert 0/1 chas to a factor
+                  step_bin2factor(chas) %>%
+                  # create interaction term between crime and nox
+                  step_interact(terms = ~ crim:zn:indus:rm:age:rad:tax:ptratio:b:lstat:dis:nox) %>%
+                  # create square terms of some continuous variables
+                  step_poly(crim,zn,indus,rm,age,rad,tax,ptratio,b,lstat,dis,nox, degree=6)
 
-# Break up the data:
-n <- nrow(mod_matrix)
-train <- sample(n, size = .8*n)
-test  <- setdiff(1:n, train)
-housing.train <- mod_matrix[train,]
-housing.test  <- mod_matrix[test, ]
+# Run the recipe
+housing_prep          <- housing_recipe %>% prep(housing_train, retain = TRUE)
+housing_train_prepped <- housing_prep %>% juice
+housing_test_prepped  <- housing_prep %>% bake(new_data = housing_test)
+
+# create x and y training and test data
+housing_train_x <- housing_train_prepped %>% select(-medv)
+housing_test_x  <- housing_test_prepped  %>% select(-medv)
+housing_train_y <- housing_train_prepped %>% select( medv)
+housing_test_y  <- housing_test_prepped  %>% select( medv)
 \end{lstlisting}
 
 \question Following the example from the lecture notes, estimate a LASSO model to predict log median house value, where the penalty parameter $\lambda$ is tuned by 6-fold cross validation. What is the optimal value of $\lambda$? What is the in-sample RMSE? What is the out-of-sample RMSE (i.e. the RMSE in the test data)?
 
-\question Repeat the previous question, but now estimate a ridge regression model where again the penalty parameter $\lambda$ is tuned by 6-fold CV. What is the optimal value of $\lambda$ now? What is the in-sample RMSE? What is the out-of-sample RMSE (i.e. the RMSE in the test data)? 
+\question Repeat the previous question, but now estimate a ridge regression model where again the penalty parameter $\lambda$ is tuned by 6-fold CV. What is the optimal value of $\lambda$ now? What is the out-of-sample RMSE (i.e. the RMSE in the test data)? 
 
-\question Repeat the previous question, but now estimate the elastic net model. In this case, you will need to use cross validation to tune the optimal $\lambda$ and $\alpha$ (the relative weight on LASSO and ridge). What are the optimal values of $\lambda$ and $\alpha$ after doing 6-fold cross validation? What is the in-sample RMSE? What is the out-of-sample RMSE? Does the optimal value of $\alpha$ lead you to believe that you should use LASSO or ridge regression for this prediction task?
+%\question Repeat the previous question, but now estimate the elastic net model. In this case, you will need to use cross validation to tune the optimal $\lambda$ and $\alpha$ (the relative weight on LASSO and ridge). What are the optimal values of $\lambda$ and $\alpha$ after doing 6-fold cross validation? What is the in-sample RMSE? What is the out-of-sample RMSE? Does the optimal value of $\alpha$ lead you to believe that you should use LASSO or ridge regression for this prediction task?
 
-\question In your .tex file, answer the questions posed in the preceding four questions. Explain why you would not be able to estimate a simple linear regression model on the \texttt{housing.train} dataframe. Using the RMSE values of each of the tuned models in the previous three questions, comment on where your model stands in terms of the bias-variance tradeoff.
+\question In your .tex file, answer the questions posed in the preceding questions. Would you be able to estimate a simple linear regression model on a data set that had more columns than rows? Using the RMSE values of each of the tuned models in the previous two questions, comment on where your model stands in terms of the bias-variance tradeoff.
 
 \question Compile your .tex file, download the PDF and .tex file, and transfer it to your cloned repository on OSCER using your SFTP client of choice (or via \texttt{scp} from your laptop terminal). You may also copy and paste your .tex file from your browser directly into your terminal via \texttt{nano} if you prefer, but you will need to use SFTP or \texttt{scp} to transer the PDF.\footnote{If you want to try out something different, you can compile your .tex file on OSCER by typing \texttt{pdflatex myfile.tex} at the command prompt of the appropriate directory. This will create the PDF directly on OSCER, removing the requirement to use SFTP or \texttt{scp} to move the file over.}
 

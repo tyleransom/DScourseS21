@@ -2,6 +2,8 @@ library(tidyverse)
 library(tidymodels)
 library(magrittr)
 
+set.seed(123456)
+
 housing <- read_table("http://archive.ics.uci.edu/ml/machine-learning-databases/housing/housing.data", col_names = FALSE)
 names(housing) <- c("crim","zn","indus","chas","nox","rm","age","dis","rad","tax","ptratio","b","lstat","medv")
 
@@ -83,14 +85,59 @@ ols_parsnip_predicted <- predict(ols_fit, housing_test_x)
 
 preds <- bind_cols(housing_test_y,ols_parsnip_predicted)
 rmse <- rmse(preds,medv,`.pred`)
-# in-sample RMSE was 0.1852
-# out-of-sample RMSE is 0.173
-
 rsq <- rsq_trad(preds,medv,`.pred`)
 # in-sample R^2 was 0.814
 # out-of-sample R^2 is 0.764
 
+# out of sample prediction
+ols_fit %>%
+  predict(housing_test_x) %>%
+  bind_cols(housing_test_y) %>%
+    metrics(truth = medv, estimate = .pred) %>% print
+# out-of-sample RMSE is 0.205
+# out-of-sample R2 is 0.802
 
+
+# in-sample prediction
+ols_fit %>%
+  predict(housing_train_x) %>%
+  bind_cols(housing_train_y) %>%
+    metrics(truth = medv, estimate = .pred) %>% print
+# in-sample RMSE is 0.173
+# in-sample R2 is 0.808
+
+
+
+# now do lasso where we set the penalty
+lasso_spec <- linear_reg(penalty=0.5,mixture=1) %>%       # Specify a model
+  set_engine("glmnet") %>%   # Specify an engine: lm, glmnet, stan, keras, spark
+  set_mode("regression") # Declare a mode: regression or classification
+
+lasso_fit <- lasso_spec %>%
+  fit_xy(x = housing_train_x, y = housing_train_y)
+
+# out of sample prediction
+lasso_fit %>%
+  predict(housing_test_x) %>%
+  bind_cols(housing_test_y) %>%
+    metrics(truth = medv, estimate = .pred) %>% print
+# out-of-sample RMSE is 0.205
+# out-of-sample R2 is 0.802
+
+
+# in-sample prediction
+lasso_fit %>%
+  predict(housing_train_x) %>%
+  bind_cols(housing_train_y) %>%
+    metrics(truth = medv, estimate = .pred) %>% print
+# in-sample RMSE is 0.173
+# in-sample R2 is 0.808
+
+
+
+#::::::::::::::::::::::::::::::::
+# cross-validate the lambda
+#::::::::::::::::::::::::::::::::
 tune_spec <- linear_reg(
   penalty = tune(), # tuning parameter
   mixture = 1       # 1 = lasso, 0 = ridge
@@ -118,3 +165,12 @@ rec_res <- rec_wf %>%
 
 top_rmse  <- show_best(rec_res, metric = "rmse")
 best_rmse <- select_best(rec_res, metric = "rmse")
+
+# Now train with tuned lambda
+final_lasso <- finalize_workflow(rec_wf, best_rmse)
+
+# Print out results in test set
+last_fit(final_lasso, split = housing_split) %>%
+         collect_metrics() %>% print
+
+
