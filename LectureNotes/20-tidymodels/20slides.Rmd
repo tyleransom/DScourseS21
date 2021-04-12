@@ -235,7 +235,7 @@ housing_test  <- testing(housing_split)
 # Using `recipes` on the UCI `housing` data
 
 ```r
-housing_recipe <- recipe(medv ~ ., data = housing) %>%
+housing_recipe <- recipe(medv ~ ., data = housing_train) %>%
                   # convert outcome variable to logs
                   step_log(all_outcomes()) %>%
                   # convert 0/1 chas to a factor
@@ -243,25 +243,24 @@ housing_recipe <- recipe(medv ~ ., data = housing) %>%
                   # create interaction term between crime and nox
                   step_interact(terms = ~ crim:nox) %>%
                   # create square terms of some continuous variables
-                  step_poly(dis,nox)
+                  step_poly(dis,nox) %>%
+                  prep()
 ```
 
 
 ---
-# `prep()` and `bake()` your `recipe()`
+# `bake()` your `recipe()`
 
-- With your recipe created, now you can apply it to the training and test sets
+- With your recipe created and prepped, now you can apply it to the training and test sets
 
-- Three steps:
+- Two steps:
 
-    1. `prep()` your recipe
-    2. Apply your "prepped" recipe to the training data with `juice()`
-    3. Apply your "prepped" recipe to the testing data with `bake()`
+    1. Apply your "prepped" recipe to the training data with `juice()`
+    2. Apply your "prepped" recipe to the testing data with `bake()`
 
 ```r
-housing_prep <- housing_recipe %>% prep(housing_train, retain = TRUE)
-housing_train_prepped <- housing_prep %>% juice
-housing_test_prepped  <- housing_prep %>% bake(new_data = housing_test)
+housing_train_prepped <- housing_recipe %>% juice
+housing_test_prepped  <- housing_recipe %>% bake(new_data = housing_test)
 ```
 
 
@@ -328,14 +327,11 @@ ols_spec <- linear_reg() %>%       # Specify a model
             set_mode("regression") # Declare a mode: regression or classification
 
 ols_fit <- ols_spec %>%
-           fit_xy(x = housing_train_x, y = housing_train_y)
-
+          fit(medv ~ ., data=housing_train_prepped)
+          
 # inspect coefficients
 tidy(ols_fit$fit$coefficients) %>% print
 tidy(est.ols) %>% print
-
-# predict out of sample
-ols_parsnip_predicted <- predict(ols_fit, housing_test_x)
 ```
 
 
@@ -350,14 +346,16 @@ ols_parsnip_predicted <- predict(ols_fit, housing_test_x)
     - or `accuracy`, `precision`, `recall` for classification tasks
 
 ```r
-preds <- bind_cols(housing_test_y,ols_parsnip_predicted)
-rmse <- rmse(preds,medv,`.pred`)
-# in-sample RMSE was 0.1852
-# out-of-sample RMSE is 0.173
-
-rsq <- rsq_trad(preds,medv,`.pred`)
-# in-sample R^2 was 0.814
-# out-of-sample R^2 is 0.764
+# predict RMSE out of sample
+ols_fit %>% predict(housing_test_prepped) %>%
+            mutate(truth = housing_test_prepped$medv) %>%
+            rmse(truth,`.pred`) %>%
+            print
+            
+ols_fit %>% predict(housing_test_prepped) %>%
+            mutate(truth = housing_test_prepped$medv) %>%
+            rsq_trad(truth,`.pred`) %>%
+            print
 ```
 
 
@@ -388,7 +386,7 @@ tune_spec <- linear_reg(
 lambda_grid <- grid_regular(penalty(), levels = 50)
 
 # 10-fold cross-validation
-rec_folds <- vfold_cv(housing_train_x %>% bind_cols(tibble(medv = housing_train_y)), v = 10)
+rec_folds <- vfold_cv(housing_train_prepped, v = 10)
 ```
 
 
@@ -400,7 +398,7 @@ rec_folds <- vfold_cv(housing_train_x %>% bind_cols(tibble(medv = housing_train_
 # Workflow
 rec_wf <- workflow() %>%
           add_model(tune_spec) %>%
-          add_formula(medv ~ .)
+          add_formula(log(medv) ~ .)
 
 # Tuning results
 rec_res <- rec_wf %>%
@@ -418,3 +416,19 @@ rec_res <- rec_wf %>%
 top_rmse  <- show_best(rec_res, metric = "rmse")
 best_rmse <- select_best(rec_res, metric = "rmse")
 ```
+
+---
+# Optimally cross-validated model
+
+```r
+# Now train with tuned lambda
+final_lasso <- finalize_workflow(rec_wf, best_rmse)
+
+# Print out results in test set
+last_fit(final_lasso, split = housing_split) %>%
+         collect_metrics() %>% print
+         
+# show best RMSE
+top_rmse %>% print(n = 1)
+```
+  
