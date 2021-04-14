@@ -94,64 +94,73 @@ As with the previous problem sets, you will submit this problem set by pushing t
     \item \texttt{e1071}
     \item \texttt{kknn}
     \item \texttt{nnet}
+    \item \texttt{kernlab}
 \end{itemize}
 
 \question Start your code file by importing the starter code I have provided you at \url{https://github.com/tyleransom/DScourseS21/blob/master/ProblemSets/PS10/PS10starter.R}. This starter code reads in the adult income data from the UC Irvine datasets repository. The goal of this problem set is to compare the 5 Tribes in terms of their ability to classify whether someone is high-income or not. Thus, the target variable for this exercise will be \texttt{income\$high.earner}. 
 
-\question Using the \texttt{mlr} library, create the following objects for your cross validation exercise:
+\question Using the \texttt{tidymodels} library (or a similar resource in Python or Julia), train, cross-validate and compute the accuracy of the predicted ``high earner'' variable in the test set. We will dispatch with \texttt{recipes} since we won't do any feature engineering in this problem set.
+
+Assume the following architecture in \texttt{parsnip}:
+
 \begin{itemize}
-\item The classification task
-\item The \textbf{3-fold} cross-validation strategy
-\item The tuning strategy (e.g. \texttt{random} with \textbf{10} guesses)
-\item Each of the six ``learners'' (algorithms):
+\item classification mode
+\item \textbf{3-fold} cross-validation
+\item various ``specifications'' and ``engines'' (algorithms):
     \begin{enumerate}
-    \item Trees: \texttt{classif.rpart}
-    \item Logistic regression: \texttt{classif.glmnet}    
-    \item Neural network: \texttt{classif.nnet}      
-    \item Naive Bayes: \texttt{classif.naiveBayes}
-    \item kNN: \texttt{classif.kknn}       
-    \item SVM: \texttt{classif.svm}       
+    \item Logistic regression: \texttt{logistic\_reg()} with engine \texttt{''glmnet''}    
+    \item Trees: \texttt{decison\_tree()} with engine \texttt{''rpart''}
+    \item Neural network: \texttt{mlp()} with engine \texttt{''nnet''}      
+    %\item Naive Bayes: \texttt{''naiveBayes''}
+    \item kNN: \texttt{nearest\_neighbor()} with engine \texttt{''kknn''}       
+    \item SVM: \texttt{svm\_rbf()} with engine \texttt{''kernlab''}       
     \end{enumerate}
-
-For each algorithm, add \texttt{predict.type = ``response''} as an additional argument to the \texttt{makeLearner()} function.
-
 \end{itemize}
 
-\question Now set up the hyperparameters of each algorithm that will need to be cross validated. If you aren't sure what to call them, please refer to the individual package documenation.
+\question Each algorithm has hyperparameters that will need to be cross validated:
 \begin{itemize}
+\item Logit model 
+    \begin{itemize}
+    \item \texttt{penalty} (this is the $\lambda$ of the LASSO model just like in PS9)
+    \end{itemize}
 \item Tree model
     \begin{itemize}
-    \item \texttt{minsplit}, which is an integer ranging from 10 to 50 (governs minimum sample size for making a split)
-    \item \texttt{minbucket}, which is an integer ranging from 5 to 50 (governs minimum sample size in a leaf)
-    \item \texttt{cp}, which is a real number ranging from 0.001 to 0.2 (governs complexity of the tree)
+    \item \texttt{min\_n}, which is an integer ranging from 10 to 50 (governs minimum sample size for making a split)
+    \item \texttt{tree\_depth}, which is an integer ranging from 5 to 20 (governs maximum tree depth)
+    \item \texttt{cost\_complexity}, which is a real number ranging from 0.001 to 0.2 (governs complexity of the tree)
     \end{itemize}
-\item Logit model (this is the elastic net model from last problem set, so the two parameters are $\lambda$ and $\alpha$. For this problem set, let $\lambda\in\left[0,3\right]$ and $\alpha\in\left[0,1\right]$.
 \item Neural network model
     \begin{itemize}
-    \item \texttt{size}, which is an integer ranging from 1 to 10 (governs number of units in hidden layer)
-    \item \texttt{decay}, which is a real number ranging from 0.1 to 0.5 (acts like $\lambda$ in the elastic net model)
-    \item \texttt{maxit}, which is an integer ranging from 1000 to 1000 (i.e. this should be fixed at 1,000 ... it governs the number of iterations the neural network takes when figuring out convergence)
+    \item \texttt{hidden\_units}, which is an integer ranging from 1 to 10 (governs number of units in hidden layer)
+    \item \texttt{penalty}, which acts like $\lambda$ in the LASSO model
     \end{itemize}
-\item Naive Bayes
-    \begin{itemize}
-    \item There's nothing to regularize here, so you don't need to do any cross-validation or tuning for this model
-    \end{itemize}
+%\item Naive Bayes
+%    \begin{itemize}
+%    \item There's nothing to regularize here, so you don't need to do any cross-validation or tuning for this model
+%    \end{itemize}
 \item kNN
     \begin{itemize}
-    \item \texttt{k}, which is an integer ranging from 1 to 30 (governs the number of ``neighbors'' to consider)
+    \item \texttt{neighbors}, which is an integer ranging from 1 to 30 (governs the number of ``neighbors'' to consider)
     \end{itemize}
 \item SVM
     \begin{itemize}
-    \item \texttt{kernel}, which is a string value equal to \texttt{``radial''} (program it as ``discrete'' in \texttt{mlr}'s interface)
-    \item \texttt{cost}, which is a real number (``discrete'' in \texttt{mlr}'s interface) in the set $\left\{2^{-2},2^{-1},2^{0},2^{1},2^{2},2^{10}\right\}$ (governs how soft the margin of classification is)
-    \item \texttt{gamma}, which is also a real number in the set $\left\{2^{-2},2^{-1},2^{0},2^{1},2^{2},2^{10}\right\}$ (governs the shape [variance] of the Gaussian kernel) 
+    \item \texttt{cost}, which is a real number in the set $\left\{2^{-2},2^{-1},2^{0},2^{1},2^{2},2^{10}\right\}$ (governs how soft the margin of classification is)
+    \item \texttt{rbf\_sigma}, which is also a real number in the set $\left\{2^{-2},2^{-1},2^{0},2^{1},2^{2},2^{10}\right\}$ (governs the shape [variance] of the Gaussian kernel) 
     \end{itemize}
 \end{itemize}
 
+For hyperparameters that are real-valued (i.e. can take on any real number), we can define a grid like we did with LASSO:
 
-\question Now tune the models. Use the F1 score and the G-measure as criteria for tuning (these are \texttt{f1} and \texttt{gmean}, respectively). Remember that you don't need to tune the Naive Bayes model.
+\texttt{lambda\_grid <- grid\_regular(penalty(), levels = 50)}
 
-\question Once tuned, apply the optimal tuning parameters to each of the algorithms (again, you don't need to do this for Naive Bayes since there was no tuning done previously). Then train the models, generate predictions, and assess performance.
+\bigskip
+but when the hyperparameters are discrete (i.e. can only take on integer values), we should instead create a data frame with the values that we want it to take on. For example, with kNN, we would set
+
+\texttt{knn\_grid <- tibble(neighbors = seq(1,30)}
+
+\question Now tune the models. Use the accuracy as the criterion for tuning. %Remember that you don't need to tune the Naive Bayes model.
+
+\question Once tuned, apply the optimal tuning parameters to each of the algorithms. Then train the models, generate predictions, and assess performance. (Just like in PS9).
 
 \question As a \textbf{table} in your .tex file, report the optimal values of the tuning parameters for each of the algorithms. How does each algorithm's out-of-sample performance compare with each of the other algorithms?
 
