@@ -1,6 +1,7 @@
 library(tidyverse)
 library(tidymodels)
 library(magrittr)
+library(modelsummary)
 library(rpart)
 library(e1071)
 library(kknn)
