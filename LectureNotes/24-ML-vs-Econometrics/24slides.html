@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Lecture 24</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Tyler Ransom" />
+    <link href="24slides_files/remark-css-0.0.1/default.css" rel="stylesheet" />
+    <link href="24slides_files/remark-css-0.0.1/metropolis.css" rel="stylesheet" />
+    <link href="24slides_files/remark-css-0.0.1/metropolis-fonts.css" rel="stylesheet" />
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+            TeX: { equationNumbers: { autoNumber: "AMS" } },
+        });
+    </script>
+        <style>
+        .mjx-mrow a {
+            color: black;
+            pointer-events: none;
+            cursor: default;
+        }
+    </style>
+    <link rel="stylesheet" href="byu-colors.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# Lecture 24
+## Machine Learning vs. Econometrics
+### Tyler Ransom
+### ECON 5253, University of Oklahoma
+
+---
+
+
+
+
+# Plan for today
+
+- Compare and contrast machine learning and econometrics
+
+- Data fallacies
+
+
+
+---
+# Important questions
+
+- How we can combine the tools of economic theory, econometrics, and ML to build better empirical economic models?
+
+    - Answers come from various lectures given by [Susan Athey](https://www.gsb.stanford.edu/faculty-research/faculty/susan-athey), who is an economics professor at Stanford and who is the foremost expert in these matters 
+    
+    - A nice podcast on the topic is available [here (11/16/2012 episode)](https://itunes.apple.com/us/podcast/uw-cse-colloquia-university-washington-computer-science/id431501588?mt=2&amp;i=1000124767619)
+
+- In what ways do econometrics and machine learning differ? 
+
+    - We've covered some of this in prior discussions this semester, but it helps to lay out exactly what the strengths of limitations of each approach is, so that we know what the comparative advantage is of each
+
+- Why is it important to be aware of so-called "data fallacies"?
+
+---
+# Data Fallacies
+Before doing that, let's briefly discuss the following Data Fallacies (which I recently came across on [twitter](https://twitter.com/KirkDBorne/status/981390062540808193), full content available [here](https://www.geckoboard.com/learn/data-literacy/statistical-fallacies/#.Ws0BvOgbNmM), download a [PDF](https://www.geckoboard.com/assets/data-fallacies-to-avoid.pdf) of the image below)
+
+.center[
+&lt;img src="dataLiteracy.jpg" width="294" /&gt;
+]
+
+
+Which fallacies is machine learning good at addressing? Which fallacies is econometrics good at addressing?
+
+
+---
+# Importance of data
+
+- In social science and business settings, we are typically interested in understanding various phenomena
+
+    * Will changing the layout of our website increase our company's revenue? By how much?
+
+    * If eBay changes its auction format, will it generate more profit?
+
+    * If our sports team changes its defensive scheme, will that increase our likelihood of winning the game?
+
+- We can try to answer these questions using economic theory
+
+- But in many cases theory only predicts a sign, not a magnitude
+
+
+---
+# Types of variables
+
+There are typically three .hi[types of variables] available to us in any kind of data set:
+1. Outcome variable
+    * It is the variable we are trying to explain (sales, revenue, profit, criminal activity, earnings, etc.)
+2. Treatment variable
+    * It is a variable that can be changed by a policymaker to affect outcomes (website layout, auction format, play calling, prison sentencing laws, etc.)
+3. Control variables
+    * These are variables that explain outcomes, but that cannot be changed by a policymaker (e.g. opponent characteristics, demographic variables, longstanding cultural traditions, etc.)
+
+
+---
+# Types of data sets
+
+Whether your data set is big or small, there are three main .hi[types of data sets]:
+
+1. Observational data
+    * Data is collected without any attempt to modify the treatment variable. We see the world "as it is." All variation in the treatment variable is non-random
+2. Quasi-experimental data
+    * Observational data, but where we observe some additional variables that are randomly (or as-if randomly) assigned, but not by the data collector
+3. Experimental data
+    * Data collected where data collector personally manipulates the treatment variable(s). In a *randomized experiment*, units of observation are randomly assigned to various levels of treatment
+
+
+---
+# Scarcity of high-quality data
+
+How ubiquitous are the three types of data?
+
+* .hi[Observational data] is by far the most common type of data. Why? because it's much easier to collect: we simply need to measure the variables we're interested in. And observational data can be used for many different purposes
+
+* .hi[Quasi-experimental data] is the next most common type. This is observational data, but restricted to instances where there are some randomly or quasi-randomly assigned variable(s) available
+
+* .hi[Experimental data] is least common, simply because it costs money to run an experiment, and typically the experiment is used to analyze a specific question, and can't easily be used to answer other questions
+
+
+---
+# Econometrics vs. Machine Learning
+
+Now that we have a sense for the various data fallacies and types of data, we can talk about in what ways econometrics and machine learning  are fundamentally different, and how the two can be combined to improve the broadly defined goals of data science
+
+
+---
+# Goal of econometrics
+
+The goal of econometrics is to make counterfactual predictions:
+
+- What *would happen* to the price of high-speed internet if Comcast and Time Warner were to be allowed to merge? 
+
+- What *would happen* to Amazon's profits if it changed its website layout? 
+
+- What *would happen* to crime rates if prison sentences for all crimes were suddenly reduced?
+
+
+---
+# Goal of econometrics (cont'd)
+
+- We don't get to observe the world under these alternative policies, so we can't simply find the answers in the data
+
+- Knowing the counterfactual requires being able to measure a .hi[causal effect]
+
+    - In previous lectures we've reduced this to saying "the goal of econometrics is to find `\(\hat{\beta}\)`" where here we mean `\(\hat{\beta}\)` to be the causal impact of `\(X\)` on `\(y\)`
+    
+- Being able to measure a causal effect requires making assumptions. That's what economics is all about!
+
+
+---
+# Ways to measure causal effects
+
+- Econometric methods were designed to measure causal effects under varying degrees of difficulty (i.e. measuring causality using  experimental data is much easier than measuring it using observational data) 
+
+- Broadly speaking, there are three different ways to do so:
+
+
+---
+# Ways to measure causal effects (cont'd)
+
+1. Field experiments (i.e. collect experimental data)
+    * Causal effects immediately visible due to experimental design
+2. "Reduced form" methods using quasi-experimental or observational data
+    * These methods include instrumental variables, regression discontinuity, and difference-in-differences (among others)
+    * The goal is to separate "good" variation (i.e. randomness in the instrument or randomness in the cutoff) from "bad" variation (non-random variation in treatment)
+3. Structural models using observational data
+    * Make assumptions (e.g. profit maximization, rational decision-making)
+    * Estimate primitives of an economic model (e.g. preferences, production fn.)
+    * Use the estimated primitives to predict what would happen under a counterfactual scenario
+
+---
+# Primary statistical concern of econometrics
+
+- The primary statistical concern of econometrics is sampling error
+
+    - In other words, the goal is to quantify the uncertainty around `\(\hat{\beta}\)` due to randomness in the sampling of the population 
+    
+    - This is the infamous standard error that econometricians obsess over
+
+- One crazy thing about econometrics is that there is no format attention paid to model misspecification error! 
+
+    - The functional form and specification of the model are assumed to be 100% correct, such that the only error that remains is the sampling error
+    
+    - Sampling error is what generates the standard errors that we use in our hypothesis testing
+
+
+---
+# Goal of machine learning
+
+- In contrast, the goal of machine learning is to come up with the best possible out-of-sample prediction 
+
+    - In previous lectures we referred to this as the primary concern of machine learning being `\(\hat{y}\)`
+
+- To get this prediction, a lot of effort is spent on validating many possible models
+
+    - This is what regularization, cross-validation, and the bias-variance tradeoff are all about
+
+- However, if the world changes in a fundamental way, the trained predictive model is no longer useful!
+
+
+---
+# Primary statistical concern of machine learning
+
+- The primary statistical concern of machine learning is model misspecification error 
+
+- The goal is to make sure that the best prediction is had by tuning and validating many different kinds of models 
+
+    - This is what cross-validation is all about, and it is what machine learning practitioners obsess about
+
+
+---
+# What econometrics and machine learning can learn from each other
+
+| Econometrics                                                 | Machine Learning |
+|--------------------------------------------------------------|------------------|
+| Less emphasis on standard errors, more emphasis on model misspecification and model selection | Find ways to obtain causal estimates from observational data that still predict well out-of-sample |
+| Do more model validation (e.g. [Delavande and Zafar, 2019](https://www.journals.uchicago.edu/doi/abs/10.1086/701808))    | Figure out how to implement methods like instrumental variables in machine learning models |
+| Use more types of data   | (e.g. better click prediction leveraging quasi-experimental or experimental data) |
+| Test assumptions that come baked-in to models                |  |
+
+
+---
+# Useful links
+* Simon Quinn's (U of Oxford) [notes](http://www.simonrquinn.com/teaching/LectureNotesLDV.pdf) on structural econometrics (limited dependent variables)
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false,
+"ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
