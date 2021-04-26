@@ -4,6 +4,8 @@
 .Ruserdata
 *.Rproj
 DS_PSgrades.xlsx
+presentationOrder.R
+orderS21.csv
 Exams/
 ProblemSets/PS3/Solutions/
 ProblemSets/PS4/Solutions/
