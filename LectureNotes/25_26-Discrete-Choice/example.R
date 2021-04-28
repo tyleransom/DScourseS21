@@ -1,44 +1,39 @@
-#### Binary choice model
+
+library(tidyverse)
+library(magrittr)
 library(mlogit)
-
-# load data on residential heating choice in CA
-data(Heating) 
+data(Heating) # load data on residential heating choice in CA
 levels(Heating$depvar) <- c("gas","gas","elec","elec","elec")
-
-# estimate logit and get predicted probabilities
-estim <- glm(depvar ~ income+agehed+rooms+region,family=binomial(link='logit'),data=Heating)
+estim <- glm(depvar ~ income+agehed+rooms+region,
+             family=binomial(link='logit'),data=Heating)
 print(summary(estim))
-Heating$predLogit <- predict(estim, newdata = Heating, type = "response")
-print(summary(Heating$predLogit))
 
-# estimate probit and get predicted probabilities
-estim2 <- glm(depvar ~ income+agehed+rooms+region,family=binomial(link='probit'),data=Heating)
+# get predictions
+Heating %<>% mutate(predLogit = predict(estim, newdata = Heating, type = "response"))
+Heating %>% `$`(predLogit) %>% summary %>% print
+
+estim2 <- glm(depvar ~ income+agehed+rooms+region,
+              family=binomial(link='probit'),data=Heating)
 print(summary(estim2))
-Heating$predProbit <- predict(estim2, newdata = Heating, type = "response")
-print(summary(Heating$predProbit))
+Heating %<>% mutate(predProbit = predict(estim2, newdata = Heating, type = "response"))
+Heating %>% `$`(predProbit) %>% summary %>% print
 
-
-# counterfactual policy: electric heating subsidy to higher-income folks
+# counterfactual policy
 estim$coefficients["income"] <- 4*estim$coefficients["income"]
-Heating$predLogitCfl <- predict(estim, newdata = Heating, type = "response")
-print(summary(Heating$predLogitCfl))
+Heating %<>% mutate(predLogitCfl = predict(estim, newdata = Heating, type = "response"))
+Heating %>% `$`(predLogitCfl) %>% summary %>% print
 
 
-
-#### Heckman selection model (from Garrett Glasgow's website)
+# heckman selection
 library(sampleSelection)
-
-# Load "Mroz" data on labor supply, fertility, and wages
-data("Mroz87")
-Mroz87$kids <- (Mroz87$kids5 + Mroz87$kids618 > 0)
-head(Mroz87)
-
-## Comparison of linear regression and selection model
-outcome1 <- lm(wage ~ exper, data = Mroz87)
-print(summary(outcome1))
-
-selection1 <- selection(selection = lfp ~ age + I(age^2) + faminc + kids + educ, outcome = wage ~ exper, 
-			data = Mroz87, method = "2step")
-print(summary(selection1))
-
+data('Mroz87')
+Mroz87 %<>% mutate(kids = (kids5 + kids618) > 0)
+Mroz87 <- Mroz87 %>% mutate(log_wageNA = case_when(wage==0 ~ NA_real_, TRUE ~ log(wage)))
+Mroz87 <- Mroz87 %>% mutate(log_wage   = case_when(wage==0 ~ 0, TRUE ~ log(wage)))
+# Comparison of linear regression and selection model
+outcome1 <- lm(log_wageNA ~ exper, data = Mroz87)
+summary(outcome1)
+selection1 <- selection(selection = lfp ~ age + I(age^2) + faminc + kids + educ,
+                        outcome = log_wage ~ exper, data = Mroz87, method = '2step')
+summary(selection1)
 

@@ -348,12 +348,14 @@ Probit model:
 The R function `glm` is the easiest way to estimate a binomial logit or probit model:
 
 ```r
+library(tidyverse)
+library(magrittr)
 library(mlogit)
 data(Heating) # load data on residential heating choice in CA
 levels(Heating$depvar) &lt;- c("gas","gas","elec","elec","elec")
 estim &lt;- glm(depvar ~ income+agehed+rooms+region,
-             family=binomial(link='logit'),data=Heating))
-print(summary(estim))
+             family=binomial(link='logit'),data=Heating)
+estim %&gt;% summary %&gt;% print
 ```
 
 
@@ -399,8 +401,8 @@ Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 To get predicted probabilities for each observation in the data:
 
 ```r
-Heating$predLogit &lt;- predict(estim, newdata = Heating, type = "response")
-print(summary(Heating$predLogit))
+Heating %&lt;&gt;% mutate(predLogit = predict(estim, newdata = Heating, type = "response"))
+Heating %&gt;% `$`(predLogit) %&gt;% summary %&gt;% print
 ```
 
 
@@ -412,9 +414,9 @@ For the probit model, we repeat the same code, except change the "link" function
 ```r
 estim2 &lt;- glm(depvar ~ income+agehed+rooms+region,
              family=binomial(link='probit'),data=Heating))
-print(summary(estim2))
-Heating$predProbit &lt;- predict(estim2, newdata = Heating, type = "response")
-print(summary(Heating$predProbit))
+estim2 %&gt;% summary %&gt;% print
+Heating %&lt;&gt;% mutate(predProbit = predict(estim2, newdata = Heating, type = "response"))
+Heating %&gt;% `$`(predProbit) %&gt;% summary %&gt;% print
 ```
 
 
@@ -437,8 +439,8 @@ print(summary(Heating$predProbit))
 
 ```r
 estim$coefficients["income"] &lt;- 4*estim$coefficients["income"]
-Heating$predLogitCfl &lt;- predict(estim, newdata = Heating, type = "response")
-print(summary(Heating$predLogitCfl))
+Heating %&lt;&gt;% mutate(predLogitCfl = predict(estim, newdata = Heating, type = "response"))
+Heating %&gt;% `$`(predLogitCfl) %&gt;% summary %&gt;% print
 ```
 
 This policy would increase electric usage by 7 percentage points (from 22\% to 29\%)
@@ -482,6 +484,7 @@ The Heckman selection model specifies two equations:
 ]
 
 ```r
+library(modelsummary)
 library(sampleSelection)
 data('Mroz87')
 Mroz87$kids &lt;- (Mroz87$kids5 + Mroz87$kids618) &gt; 0
@@ -500,9 +503,9 @@ Output from a regression of wage on experience:
 
 ```r
 Coefficients:
-            Estimate Std. Error t value Pr(&gt;|t|)
-(Intercept)  1.30434    0.18937   6.888 1.20e-11 ***
-exper        0.10067    0.01419   7.093 3.03e-12 ***
+            Estimate Std. Error t value Pr(&gt;|t|)    
+(Intercept) 0.991989   0.065674  15.105  &lt; 2e-16 ***
+exper       0.015201   0.004287   3.546 0.000434 ***
 ---
 ```
 
@@ -515,15 +518,15 @@ Probit selection equation:
 (Intercept) -4.157e+00  1.402e+00  -2.965 0.003126 **
 kidsTRUE    -4.490e-01  1.309e-01  -3.430 0.000638 ***
 Outcome equation:
-               Estimate Std. Error t value Pr(&gt;|t|)
-(Intercept)  7.12492    0.80425   8.859   &lt;2e-16 ***
-exper        0.02962    0.02059   1.439    0.151
-Multiple R-Squared:0.0823,      Adjusted R-Squared:0.0779
-Error terms:
-                Estimate Std. Error t value Pr(&gt;|t|)
-invMillsRatio   -5.075      1.108  -4.581 5.42e-06 ***
-sigma            4.977         NA      NA       NA
-rho             -1.020         NA      NA       NA
+            Estimate Std. Error t value Pr(&gt;|t|)    
+(Intercept) 1.775794   0.181695   9.773  &lt; 2e-16 ***
+exper       0.016899   0.004478   3.774 0.000174 ***
+Multiple R-Squared:0.1257,	Adjusted R-Squared:0.1216
+   Error terms:
+              Estimate Std. Error t value Pr(&gt;|t|)    
+invMillsRatio  -1.2270     0.2504  -4.901 1.17e-06 ***
+sigma           1.1480         NA      NA       NA    
+rho            -1.0688         NA      NA       NA
 ```
 ]
 
@@ -535,9 +538,9 @@ rho             -1.020         NA      NA       NA
 
 - Because there are two equations, there are now more parameters
 
-- Using just the regression on workers led us to believe the returns to experience were `\(\approx 10\%\)`
+- Using just the regression on workers led us to believe the returns to experience were `\(\approx 1.5%\)`
 
-- Taking into account the selectivity of labor force participants leads us to conclude the returns to experience are much lower ($\approx 3\%$ and not statistically different from zero)
+- Taking into account the selectivity of labor force participants leads us to conclude the returns to experience are slightly higher, `\(\approx 1.7%\)`
 
 - Viability of the model depends on the assumption that's made: in this case, that having children only affects labor supply preferences and doesn't affect wages
     - Wage discrimination against mothers in the labor market would invalidate this
